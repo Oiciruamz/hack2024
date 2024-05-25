@@ -21,9 +21,9 @@ def user_braille():
     print(brailleToAlpha.translate(input()))
 
 
-def user_text():
-    print("Input Text: ", end="")
-    print(alphaToBraille.translate(input()))
+def user_text(x):
+    a =alphaToBraille.translate(x)
+    return a
 
 
 def open_braille(filename):
@@ -62,6 +62,7 @@ def argument_handler():
             menu()
     else:
         menu()
+
 
 
 if __name__ == "__main__":
