@@ -1,6 +1,10 @@
 # Contains dictionaries that map braille to English letters.
 
-letters = {chr(10241): 'a',
+letters = {
+           chr(10295): 'á', 
+
+
+           chr(10241): 'a',
            chr(10243): 'b',
            chr(10249): 'c',
            chr(10265): 'd',

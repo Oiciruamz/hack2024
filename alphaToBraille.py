@@ -1,7 +1,7 @@
 # Translate alphabet based text to braille.
 import mapAlphaToBraille, mapBrailleToAlpha
 
-CAPITAL = chr(10272)  # ⠠
+CAPITAL = chr(10245)  # ⠠
 NUMBER = chr(10300)  # ⠼
 UNRECOGNIZED = '?'
 
@@ -33,6 +33,8 @@ def is_braille(char):
         or char in mapBrailleToAlpha.contractions \
         or char == CAPITAL \
         or char == NUMBER
+        
+      
 
 
 def trim(word):
