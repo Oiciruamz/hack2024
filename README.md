@@ -18,7 +18,7 @@ Sigue estos pasos para instalar y ejecutar la aplicación:
 1. **Configura un entorno virtual** (opcional, pero recomendado):
     ```bash
     python -m venv env
-    source env/bin/activate  # En Windows usa `env\Scripts\activate`
+    source myenv/bin/activate  # En Windows usa `env\Scripts\activate`
     ```
 
 2. **Clona el repositorio:**
