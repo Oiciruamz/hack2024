@@ -16,10 +16,9 @@ def menu():
     ''')
 
 
-def user_braille():
-    print("Input Braille: ", end="")
-    print(brailleToAlpha.translate(input()))
-
+def user_braille(x):
+    a = brailleToAlpha.translate(x)
+    return a
 
 def user_text(x):
     a =alphaToBraille.translate(x)

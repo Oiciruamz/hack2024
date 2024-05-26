@@ -37,12 +37,21 @@ if image_path is not None:
     
     try:
          
+        st.image(image_path, use_column_width=True)
+         
         lines = count_text_lines(image_path)
         for line in lines:
             texto+=line + " "
             
         
-        st.write(main.user_text(texto))
+        
+        st.subheader("Texto extraído de la imagen:")   
+        
+        braille = main.user_text(texto)
+        st.markdown(braille)
+        
+        
+        st.text()
             
     
     except Exception as e:
