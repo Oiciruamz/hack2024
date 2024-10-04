@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor de texto a Braille</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1>Letras inclusivas</h1>
+            <div class="braille">⠠⠇⠑⠗⠁⠎ ⠊⠝⠉⠇⠥⠎⠊⠧⠁⠎</div>
+        </div>
+        <div class="header-right">
+            <h2>Cambiando el mundo un texto a la vez</h2>
+        </div>
+    </header>
+
+    <main>
+        <h2>Sube un archivo PDF para traducirlo a Braille</h2>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="pdf_file" accept="application/pdf" required>
+            <button type="submit">Traducir</button>
+        </form>
+    </main>
+</body>
+</html>
