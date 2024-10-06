@@ -36,6 +36,10 @@ def upload_pdf():
     # Renderizar el resultado en la página
     return render_template('result.html', braille=braille)
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
 @app.route('/download_braille', methods=['POST'])
 def download_braille():
     text = request.form['braille']  # Obtiene el texto de braille desde el formulario
