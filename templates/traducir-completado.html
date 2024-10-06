@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Traducir PDF a Braille</title>
+    <title>Resultado de Braille</title>
     <style>
 
         html {
@@ -14,7 +14,7 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: Poppins, sans-serif;
             background-color: #f5f5f5;
             margin: 0;
             padding: 0;
@@ -120,9 +120,18 @@
         }
 
         .descargar {
+            cursor: pointer;
+            padding: 30px;
+            width: 250px;
+            border-radius: 20px;
+            border: 1px solid #6A36B3;
             background-color: #6A36B3;
             color: #fff;
             font-weight: bold;
+        }
+
+        .descargar:hover {
+            background-color: #55299A;
         }
 
         .subir {
@@ -130,12 +139,16 @@
             font-weight: bold;
         }
 
+        .subir:hover {
+            background-color: #bfa6f0;
+        }
+
         .subir img {
-            width: 15px;
+            width: 12px;
         }
 
         .descargar img {
-            width: 20px;
+            width: 15px;
         }
 
         @media (max-width: 1100px) {
@@ -222,8 +235,8 @@
         </div>
         <nav>
             <a href="#">Catálogo</a>
-            <a href="traducir-Inicio.html" class="translate-btn" style="font-weight: bold;">
-                <img src="resources/iconotransferir.svg" alt="Icono de archivo">
+            <a href="/" class="translate-btn" style="font-weight: bold;">
+                <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" alt="Icono de archivo">
                 Traducir archivo
             </a>
             <a href="#">Iniciar sesión</a>
@@ -233,17 +246,23 @@
 
     <div class="container">
         <h1>Archivo PDF traducido a código braile</h1>
-        <a class="descargar" href="">
-            <img src="resources/descargar.png" alt="Icono de descargar">
-            Descargar Archivo
-        </a>
+
+        <form action="/download_braille" method="POST">
+            <input type="hidden" name="braille" value="{{braille}}">
+            <button type="submit" class="descargar">
+                <img src="{{ url_for('static', filename='images/descargar.png') }}" alt="Icono de descargar">
+                Descargar Archivo
+            </button>
+        </form>
 
         <p style="font-size: 20px; font-weight: bold; margin-bottom: 60px;">ó</p>
 
-        <a class="subir" href="">
-            <img src="resources/iconotransferir.svg" alt="Icono de subir">
+        <a class="subir" href="/">
+            <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" alt="Icono de subir">
             Subir Archivo
         </a>
+
+        <!-- <p>{{braille}}</p> Solo estaba comprobando si recibia el braille -->
     </div>
 
 </body>

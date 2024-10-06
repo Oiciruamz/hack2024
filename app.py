@@ -6,13 +6,14 @@ from pdf2image import convert_from_path
 from app.pdfDown import PDF
 import LetrasInclusivas as lt
 import os
+import time
 
 app = Flask(__name__)
 
 # Ruta principal para la página de inicio
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('traducir-Inicio.html')
 
 # Ruta para procesar el PDF y traducirlo a Braille
 @app.route('/upload', methods=['POST'])
@@ -34,6 +35,9 @@ def upload_pdf():
     file_path = os.path.join('temp_files', 'temp_pdf.pdf')
     pdf_file.save(file_path)
 
+    # Simular un proceso de carga largo (quitar esto en producción)
+    # time.sleep(5)  # Simula que el procesamiento tarda 5 segundos
+
     # Contar líneas de texto y procesarlas
     lines = lt.count_text_lines(file_path)
     texto = " ".join(lines)
@@ -42,7 +46,7 @@ def upload_pdf():
     braille = mn.user_text(texto)
 
     # Renderizar el resultado en la página
-    return render_template('result.html', braille=braille)
+    return render_template('traducir-completado.html', braille=braille)
 
 @app.route('/login')
 def login():
@@ -51,14 +55,14 @@ def login():
 @app.route('/download_braille', methods=['POST'])
 def download_braille():
     text = request.form['braille']  # Obtiene el texto de braille desde el formulario
-    file_path = "mi_documento_braille.pdf"
+    file_path = os.path.join('temp_files', 'mi_documento_braille.pdf')
 
     # Crear el PDF
     pdf = PDF()
     pdf.download_braille(text, file_path)
 
     # Enviar el archivo para descargar
-    return send_file(file_path, as_attachment=True)
+    return send_file(file_path, as_attachment=True, download_name='braille_document.pdf')
 
 # Función para contar líneas de texto en la imagen (la misma de Streamlit)
 def count_text_lines(pdf_path):
