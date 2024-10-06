@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traducir PDF a Braille</title>
+    <style>
+
+        html {
+        box-sizing: border-box;
+        }
+        *, *:before, *:after {
+        box-sizing: inherit;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #6A36B3;
+            padding: 15px 50px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Estilos del contenedor de la barra de búsqueda */
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border-radius: 20px;
+            padding: 5px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+        }
+
+        /* El input de texto sin bordes ni outline */
+        .search-bar input[type="text"] {
+            border: none;
+            outline: none;
+            padding: 10px;
+            width: 500px;
+            border-radius: 20px 0 0 20px;
+        }
+
+        /* El botón de buscar dentro del input */
+        .search-bar button {
+            background-color: #6A36B3;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-bar button:hover {
+            background-color: #55299A;
+        }
+
+        header nav {
+            display: flex;
+            align-items: center;
+        }
+
+        header nav a {
+            /* margin-left: 20px; */
+            color: white;
+            text-decoration: none;
+            margin: 0 8px;
+        }
+
+        header nav a:hover {
+            text-decoration: underline;
+        }
+
+        header nav a img {
+            margin-left: 2px;
+            width: 15px;
+            height: 15px;
+        }
+
+        header .btn {
+            background-color: white;
+            color: #6A36B3;
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .container {
+            text-align: center;
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #000;
+            font-weight: 700;
+            font-size: 2em;
+            margin-bottom: 50px;
+        }
+
+        .container a {
+            width: 250px;
+            padding: 30px;
+            border: 1px solid #6A36B3;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            text-decoration: none;
+        }
+
+        .descargar {
+            background-color: #6A36B3;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .subir {
+            background-color: #d6bcf8;
+            font-weight: bold;
+        }
+
+        .subir img {
+            width: 15px;
+        }
+
+        .descargar img {
+            width: 20px;
+        }
+
+        @media (max-width: 1100px) {
+            header {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            /* Ajustar el tamaño del logo y barra de búsqueda */
+            header h2 {
+                font-size: 1.5em;
+                margin-bottom: 15px;
+            }
+
+            .search-bar {
+                width: 500px;
+                padding: 0;
+            }
+
+            .search-bar input[type="text"] {
+                width: 100%;
+                padding: 10px;
+                font-size: 1em;
+            }
+
+            .search-bar button {
+                padding: 10px;
+                font-size: 1em;
+            }
+
+            /* Alinear los elementos del menú de navegación para pantallas pequeñas */
+            header nav {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            header nav a, header .btn {
+                margin: 10px 0;
+                padding: 10px 15px;
+                font-size: 1em;
+            }
+
+            .container {
+                margin-top: 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+        }
+
+        @media (max-width: 480px) {
+
+            .search-bar {
+                width: 100%;
+                padding: 0;
+            }
+
+            .search-bar input[type="text"] {
+                font-size: 0.9em;
+            }
+
+            header h2 {
+                font-size: 1.2em;
+            }
+
+            h1 {
+                font-size: 1.2em;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h2 style="margin-left: 10px;">Letras Inclusivas</h2>
+        </div>
+        <div class="search-bar">
+            <input type="text" placeholder="Alicia en el país de las maravillas">
+            <button type="submit">Buscar</button>
+        </div>
+        <nav>
+            <a href="#">Catálogo</a>
+            <a href="traducir-Inicio.html" class="translate-btn" style="font-weight: bold;">
+                <img src="resources/iconotransferir.svg" alt="Icono de archivo">
+                Traducir archivo
+            </a>
+            <a href="#">Iniciar sesión</a>
+            <button class="btn">Registrarse</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>Archivo PDF traducido a código braile</h1>
+        <a class="descargar" href="">
+            <img src="resources/descargar.png" alt="Icono de descargar">
+            Descargar Archivo
+        </a>
+
+        <p style="font-size: 20px; font-weight: bold; margin-bottom: 60px;">ó</p>
+
+        <a class="subir" href="">
+            <img src="resources/iconotransferir.svg" alt="Icono de subir">
+            Subir Archivo
+        </a>
+    </div>
+
+</body>
+</html>

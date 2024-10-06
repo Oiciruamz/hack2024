@@ -22,6 +22,14 @@ def upload_pdf():
     
     pdf_file = request.files['pdf_file']
 
+    # Validar que es un archivo PDF
+    if pdf_file.content_type != 'application/pdf':
+        return 'Invalid file type, only PDFs are allowed', 400
+
+    # Crear directorio temporal si no existe
+    if not os.path.exists('temp_files'):
+        os.makedirs('temp_files')
+
     # Guardar temporalmente el PDF
     file_path = os.path.join('temp_files', 'temp_pdf.pdf')
     pdf_file.save(file_path)
