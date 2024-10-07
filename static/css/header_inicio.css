@@ -1,0 +1,239 @@
+html {
+    box-sizing: border-box;
+    }
+    *, *:before, *:after {
+    box-sizing: inherit;
+    }
+
+    body {
+        font-family: Poppins, sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        background-color: #6A36B3;
+        padding: 5px 40px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Estilos del contenedor de la barra de búsqueda */
+    .search-bar {
+        display: flex;
+        align-items: center;
+        background-color: white;
+        border-radius: 10px;
+        padding: 5px;
+        border: 1px solid transparent;
+        transition: all 0.3s;
+    }
+
+    /* El input de texto sin bordes ni outline */
+    .search-bar input[type="text"] {
+        border: none;
+        outline: none;
+        padding: 10px;
+        width: 500px;
+        border-radius: 20px 0 0 20px;
+    }
+
+    /* El botón de buscar dentro del input */
+    .search-bar button {
+        background-color: #2b292d;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .search-bar button:hover {
+        background-color: #773bd7;
+    }
+
+    header nav {
+        display: flex;
+        align-items: center;
+    }
+
+    header nav a {
+        /* margin-left: 20px; */
+        color: white;
+        text-decoration: none;
+        margin: 0 8px;
+    }
+
+    header nav a:hover {
+        text-decoration: underline;
+    }
+
+    header nav a img {
+        margin-left: 2px;
+        width: 15px;
+        height: 15px;
+    }
+
+    header .btn {
+        background-color: white;
+        font-size: medium;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.247);
+        border: none;
+        cursor: pointer;
+    }
+
+    .container {
+        text-align: center;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h1 {
+        color: #000;
+        font-weight: 700;
+        font-size: 2em;
+    }
+
+    .upload-btn {
+        display: block;
+        /* width: 500px; */
+        background-color: #6A36B3;
+        color: white;
+        padding: 20px 40px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1.2em;
+    }
+
+    .upload-btn:hover {
+        background-color: #55299A;
+    }
+
+    .dropzone {
+        width: 500px;
+        border: 2px dashed #6A36B3;
+        padding: 50px;
+        margin-top: 20px;
+        border-radius: 10px;
+        color: #6A36B3;
+        cursor: pointer;
+    }
+
+    .dropzone:hover {
+        background-color: #EDE7F6;
+    }
+
+    #loading-spinner {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 50px;
+    }
+
+    .loader {
+        border: 16px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 16px solid #6A36B3;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 1100px) {
+        header {
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        /* Ajustar el tamaño del logo y barra de búsqueda */
+        header h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .search-bar {
+            width: 500px;
+            padding: 0;
+        }
+
+        .search-bar input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+        }
+
+        .search-bar button {
+            padding: 10px;
+            font-size: 1em;
+        }
+
+        /* Alinear los elementos del menú de navegación para pantallas pequeñas */
+        header nav {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header nav a, header .btn {
+            margin: 10px 0;
+            padding: 10px 15px;
+            font-size: 1em;
+        }
+
+        .container {
+            margin-top: 20px;
+        }
+
+        h1 {
+            font-size: 1.5em;
+        }
+
+        .upload-btn {
+            padding: 15px 30px;
+            font-size: 1em;
+        }
+
+        /* Ajustar el tamaño de la zona de arrastre */
+        .dropzone {
+            width: 100%;
+            padding: 30px;
+        }
+    }
+
+    @media (max-width: 480px) {
+
+        .search-bar {
+            width: 100%;
+            padding: 0;
+        }
+        
+        .search-bar input[type="text"] {
+            font-size: 0.9em;
+        }
+
+        header h2 {
+            font-size: 1.2em;
+        }
+
+        .upload-btn {
+            padding: 10px 20px;
+            font-size: 0.9em;
+        }
+
+        h1 {
+            font-size: 1.2em;
+        }
+    }

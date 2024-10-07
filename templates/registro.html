@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">   
-    <title>Iniciar sesión</title>
+    <title>Traductor de texto a Braille</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <style>
@@ -18,12 +18,14 @@
             font-size: 14px;
         }
 
-        .link-login:hover {
+        .link-login:hover 
+        {
             color: #5533ff; /* Cambia a un color diferente al hacer hover */
             text-decoration: underline; /* Añade un subrayado opcional */
         }
 
-        .btn-secondary{
+        .btn-secondary
+        {
             width: 295px; 
             height: 50px; 
             border-radius: 5px;
@@ -53,31 +55,22 @@
 
     <main class="d-flex flex-column align-items-center border rounded-3 shadow border-secondary-subtle" style="width: 400px; height: 425px; background-color: #FFFFFF">
 
-        <h4 class="mt-5 mb-5" style=" font-family: Poppins, sans-serif; font-size:larger; font-weight: 500; font-style: normal;">Inicia sesión con tu cuenta</h4>
+        <h4 class="mt-5 mb-4" style=" font-family: Poppins, sans-serif; font-size:larger; font-weight: 500; font-style: normal;">Crea tu cuenta</h4>
 
-        <form method="POST" action="{{ url_for('login') }}" class="d-flex flex-column align-items-center">
-            <div class="d-flex flex-column align-items-center justify-content-between mb-5" style="height: 120px;">
-                <input type="email" name="email" class="form-control" style="font-family: Poppins, sans-serif; font-size: 14px; font-weight:300; width: 295px; height: 50px;" placeholder="Correo electrónico*" aria-label="email" aria-describedby="basic-addon1" required>
+        <div class="d-flex flex-column align-items-center justify-content-between mb-4" style="height: 190px;">
 
-                <input type="password" name="password" class="form-control" style="font-family: Poppins, sans-serif; font-size: 14px; font-weight:300; width: 295px; height: 50px;" placeholder="Contraseña*" aria-label="password" aria-describedby="basic-addon1" required>
-            </div>
+            <input type="text" class="form-control" style="font-family: Poppins, sans-serif; font-weight:300; font-size: 14px; width: 295px; height: 50px;" placeholder="Nombre de usuario*" aria-label="user_name" aria-describedby="basic-addon1">
 
-            <section class="d-flex flex-column" style="height: 100px;">
-                <a href="{{ url_for('registro') }}" class="link-login mb-2">¿No tienes cuenta? Regístrate aquí</a>
-                <button type="submit" class="btn btn-secondary">Iniciar sesión</button>
-            </section>
-        </form>
+            <input type="text" class="form-control" style="font-family: Poppins, sans-serif; font-weight:300; font-size: 14px; width: 295px; height: 50px;" placeholder="Correo electrónico*" aria-label="email" aria-describedby="basic-addon1">
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mt-3" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+            <input type="text" class="form-control" style="font-family: Poppins, sans-serif; font-weight:300; font-size: 14px; width: 295px; height: 50px;" placeholder="Contraseña*" aria-label="password" aria-describedby="basic-addon1">
+            
+        </div>
 
+        <section class="d-flex flex-column" style="height: 100px;">
+            <a href="" class="link-login mb-2">¿Ya tienes cuenta? Inicia sesión aquí</a>
+            <button type="button" class="btn btn-secondary">Registrarse</button>
+        </section>
     </main>
 </body>
 
