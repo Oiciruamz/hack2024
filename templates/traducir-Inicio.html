@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">  
     <title>Traducir PDF a Braille</title>
     <style>
 
@@ -22,7 +25,7 @@
 
         header {
             background-color: #6A36B3;
-            padding: 15px 50px;
+            padding: 5px 40px;
             color: white;
             display: flex;
             justify-content: space-between;
@@ -34,7 +37,7 @@
             display: flex;
             align-items: center;
             background-color: white;
-            border-radius: 20px;
+            border-radius: 10px;
             padding: 5px;
             border: 1px solid transparent;
             transition: all 0.3s;
@@ -51,17 +54,17 @@
 
         /* El botón de buscar dentro del input */
         .search-bar button {
-            background-color: #6A36B3;
+            background-color: #2b292d;
             color: white;
             border: none;
-            border-radius: 0 20px 20px 0;
+            border-radius: 5px;
             padding: 10px 20px;
             cursor: pointer;
             transition: background-color 0.3s;
         }
 
         .search-bar button:hover {
-            background-color: #55299A;
+            background-color: #773bd7;
         }
 
         header nav {
@@ -88,16 +91,17 @@
 
         header .btn {
             background-color: white;
-            color: #6A36B3;
-            padding: 10px 20px;
-            border-radius: 20px;
+            font-size: medium;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.247);
             border: none;
             cursor: pointer;
         }
 
         .container {
             text-align: center;
-            margin-top: 40px;
+            margin-top: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -251,25 +255,26 @@
 
     <header>
         <div>
-            <h2 style="margin-left: 10px;">Letras Inclusivas</h2>
+            <h2 style="margin-left: 5px; font-weight: 300;" >Letras Inclusivas</h2>
         </div>
         <div class="search-bar">
             <input type="text" placeholder="Alicia en el país de las maravillas">
             <button type="submit">Buscar</button>
         </div>
         <nav>
-            <a href="#">Catálogo</a>
-            <a href="/" class="translate-btn" style="font-weight: bold;">
-                <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" alt="Icono de archivo">
+            <a href="#" style="font-size: small;">Inicio</a>
+            <a href="#" style="font-size: small;">Catálogo</a>
+            <a href="/" class="translate-btn" style="font-weight: 700; font-size: small;">
+                <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" style="filter: brightness(0) invert(1);"  alt="Icono de archivo">
                 Traducir archivo
             </a>
-            <a href="#">Iniciar sesión</a>
-            <button class="btn">Registrarse</button>
+            <a href="#"  style="font-size: small;">Iniciar sesión</a>
+            <button class="btn"  style="font-size: small; color: #000; font-weight: 600;">Registrarse</button>
         </nav>
     </header>
 
     <div class="container" id="form-content">
-        <h1>Traducir archivo PDF a código braille</h1>
+        <h1>Traducir archivo PDF a código Braille</h1>
         <p>Ingresa el archivo que deseas traducir</p>
 
         <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data"">
@@ -284,7 +289,7 @@
 
     <div id="loading-spinner">
         <div class="loader"></div>
-        <h2>Cargando el archivo, por favor espera...</h2>
+        <h2>Traduciendo el archivo, por favor espera...</h2>
     </div>
 
     <script>

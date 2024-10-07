@@ -15,6 +15,10 @@ app = Flask(__name__)
 def index():
     return render_template('traducir-Inicio.html')
 
+@app.route('/inicio')
+def inicio():
+    return render_template('inicio.html')
+
 # Ruta para procesar el PDF y traducirlo a Braille
 @app.route('/upload', methods=['POST'])
 def upload_pdf():
@@ -22,10 +26,6 @@ def upload_pdf():
         return 'No PDF file part', 400
     
     pdf_file = request.files['pdf_file']
-
-    # Validar que es un archivo PDF
-    if pdf_file.content_type != 'application/pdf':
-        return 'Invalid file type, only PDFs are allowed', 400
 
     # Crear directorio temporal si no existe
     if not os.path.exists('temp_files'):
