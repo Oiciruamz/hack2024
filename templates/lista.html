@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"> 
+    <link rel="stylesheet" href="../static/css/header_inicio.css">
+    <title>Lista </title>
+
+    <style>
+
+        .banner_bienvenida
+        {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background-color: #1E1E1E;
+            height: 170px;
+            margin-bottom: 20px;
+            
+        }
+
+        .genero
+        {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 300px;
+        }
+        .contenedor-tarjetas
+        {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-evenly;
+            width: 100%;
+            height: 50vh;
+            /* border: 2px solid black; */
+        }
+        .tarjeta
+        {
+            display: flex;
+            width: 455px;
+            margin-top: 40px;
+            margin-left: 5px;
+            height: 27vh;
+            box-shadow: 0px 1px 1px rgb(69, 69, 69);
+        }
+
+        .color-tarjeta
+        {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            align-content: center;
+            margin-bottom: 80px;
+        }
+
+        .boton-tarjeta
+        {
+            display:flex; 
+            justify-content: center; 
+            align-items: center; 
+            border: 2px solid black;
+            width: 85px;
+            border-radius: 5px;
+            height: 35px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'header.html' %}
+
+    <section class="banner_bienvenida">
+        <div style="display: flex; align-items: center;">
+            <img src="{{ url_for('static', filename='images/lista.svg') }}" alt="Icono usuario" style="object-fit: scale-down; width: 40px; height: 60px; filter: brightness(0) invert(1);">
+            <h1 style="color: white; margin: 0; margin-left: 20px; font-weight: 300;">{{ lista.nombre}}</h1>
+        </div>
+    </section>
+
+    <main class="genero">
+
+        <h3 style="margin-left: 60px;">Libros en la lista {{lista.nombre}}</h3>
+
+        <div class="contenedor-tarjetas">
+
+            {% for libro in libros %}
+            <div class="tarjeta">
+                <div class="color-tarjeta" >
+                    <div style=" display: flex; justify-content: center; margin-top: 35px; width: 100%; height: 100%; margin-left: 50px; margin-right: 50px;">
+                        <img src="{{ url_for('static', filename='images/' + libro.imagen) }}" alt="" style=" width: 120px; height: 180px; object-fit: fill; box-shadow: 0px 1px 2px black;">
+                    </div>
+                    
+                </div>
+
+                <div style="width: 100%; display: flex; flex-direction: column; justify-content: center;">
+                    <h5 style="margin: 0px; margin-bottom: 5px;">{{ libro.titulo }}</h5>
+                    <h6 style="margin: 0px; margin-bottom: 20px; font-weight: 500;">{{ libro.autor }}</h6>
+
+                    <div style="display: flex; justify-content: space-evenly; text-align: center;">
+
+                        <button class="boton-tarjeta" style="border-color: #653F95; background-color: #653F95; color: white;">
+                            <p style="font-size: 12px; margin: 0px;">Descargar</p>
+                        </button>
+
+                        <button class="boton-tarjeta guardar-btn" 
+                                data-libro-id="{{ libro.id }}"
+                                style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600; cursor: pointer;">
+                            <p style="font-size: 12px; margin: 0px;">Eliminar</p>
+                        </button>
+
+                        
+
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+        
+
+    <script>
+
+
+        function setupGuardarButtons() 
+        {
+            document.querySelectorAll('.guardar-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tarjeta = this.closest('.tarjeta');
+                    if (tarjeta) {
+                        tarjeta.style.display = 'none'; // Oculta la tarjeta cuando se hace clic en el botón
+                    } else {
+                        console.error('No se encontró una tarjeta asociada a este botón');
+                    }
+                    // Aquí puedes agregar cualquier otra lógica que necesites ejecutar al hacer clic
+                });
+            });
+        }
+        
+        setupGuardarButtons()
+
+        
+    </script>
+</body>
+</html>

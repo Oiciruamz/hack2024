@@ -8,13 +8,112 @@
     <link rel="stylesheet" href="../static/css/header_inicio.css">
     <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"> 
     <title>Perfil</title>
+
+    <style>
+
+        .banner_bienvenida
+        {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background-color: #1E1E1E;
+            height: 170px;
+            margin-bottom: 20px;
+            
+        }
+
+        .banner_bienvenida button
+        {
+            all: unset;
+            text-align: center;
+            border-color: 1px solid #1E1E1E;
+            border-radius: 5px;
+            box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25); 
+            cursor: pointer; /* Opción si quieres mantener el puntero en mano */
+        }    
+        .genero
+        {
+            display: flex;
+            flex-direction: column;
+        }
+        .contenedor-tarjetas
+        {
+            display: flex;
+            margin-left: 60px;
+            width: 100%;
+            height: 50vh;
+        }
+        .tarjeta
+        {
+            width: 345px;
+            height: 240px;
+            margin-left: 40px;           
+            box-shadow: 0px 1px 1px rgb(69, 69, 69);
+            margin: 1px solid rgb(104, 104, 104);
+            border-radius: 5px;
+        }
+
+        .color-tarjeta
+        {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            align-content: center;
+            width: 100%;
+            height: 53%;
+            margin-bottom: 20px;
+            background-color: rgb(166, 166, 166);
+        }  
+    </style>
 </head>
 <body>
     {% include 'header.html' %}
 
 
-    <h1>HOLA!!</h1>
+    <section class="banner_bienvenida">
+        <div style="display: flex; align-items: center;">
+            <img src="{{ url_for('static', filename='images/usuario.svg') }}" alt="Icono usuario" style="object-fit: scale-down; width: 60px; height: 80px;">
+            <h1 style="color: white; margin: 0; margin-left: 20px; font-weight: 300;">¡Hola {{ current_user.email }}!</h1>
+        </div>
+        <div style="display: flex; width: 380px; justify-content: space-between;">
+            <button type="button" style="width: 160px; height: 60px; background-color: rgba(67, 67, 67, 0.27); color: white;  font-size: medium; border-color: #1E1E1E;">Editar cuenta</button>
+            <button type="button" href="/logout" style="width: 160px; height: 60px; background-color: rgba(146, 65, 250, 0.6); color: white; font-size: medium; "><a href="/logout" style="text-decoration: none; color: white; padding: 10px;">Cerrar sesión</a></button>
+        </div>
+    </section>
+        
+    </main>
 
-    <button class="btn"  style="font-size: small; color: #000; font-weight: 600;"><a href="/logout" style="text-decoration: none; color: #000; padding: 10px;">Logout</a></button>
+        <div>
+            <h2 style="margin-left: 100px; font-weight: 500;"> Tus Listas</h2>         
+        </div>
+        
+        <div class="contenedor-tarjetas">
+            {% for lista in listas %}
+            <div class="tarjeta">
+                <div class="color-tarjeta"  style="background-color: {{ lista.color }};">
+                    <div style="display: flex; justify-content: center;  width: 100%; height: 100%;">
+                        {% set max_libros = 2 %}
+                        {% for libro in lista.libros %}
+                            {% if loop.index <= max_libros %}
+                                <img src="{{ url_for('static', filename='images/' + libro.imagen) }}" alt="{{ libro.titulo }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <a  href="{{ url_for('lista_individual', lista_id=lista.id) }}" style="text-decoration: none; color: #1E1E1E;">
+                    <h5 style="margin-left: 10px;">{{ lista.nombre }}</h5>
+                    <h6 style="margin-left: 10px;"></h6>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+    </main>
+
+
+
+
 </body>
 </html>

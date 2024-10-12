@@ -1,8 +1,7 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
+from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify 
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 import random
-import pytesseract
 from app import main as mn
 from pdf2image import convert_from_path
 from app.pdfDown import PDF
@@ -21,11 +20,52 @@ class User(UserMixin):
         self.id = id
         self.email = email
         self.password_hash = password_hash
+        self.saved_books = []  
+
 
 users = {
     'usuario@ejemplo.com': User('1', 'usuario@ejemplo.com', generate_password_hash('contraseña'))
 }
 
+
+libros = [
+            {
+                "id": 1,
+                "imagen": "rebelion.webp",
+                "titulo": "Rebelión en la granja",
+                "autor": "George Orwell"
+            },
+            {
+                "id": 2,
+                "imagen": "1984.webp",
+                "titulo": "1984",
+                "autor": "George Orwell"
+            },
+            {
+                "id": 3,
+                "imagen": "guerra_mundos.jpg",
+                "titulo": "La guerra de los mundos",
+                "autor": "H.G Wells"
+            },
+            {
+                "id": 4,
+                "imagen": "carretera.jpg",
+                "titulo": "La carretera",
+                "autor": "Cormac McCarthy"
+            },
+            {
+                "id": 5,
+                "imagen": "metamorfosis.jpg",
+                "titulo": "La metamorfosis",
+                "autor": "Franz Kakfa"
+            },
+            {
+                "id": 6,
+                "imagen": "Frankie.jpg",
+                "titulo": "Frankenstein",
+                "autor": "Mary Shelley"
+            }
+        ]
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -51,9 +91,112 @@ def logout():
     logout_user()
     return redirect(url_for('inicio'))
 
+# Almacenamiento en memoria para listas y libros
+listas = {}  # Diccionario para almacenar listas
+contador_listas = 1  # Contador para IDs de listas
+
+@app.route('/crear_lista', methods=['POST'])
+def crear_lista():
+    global contador_listas
+    data = request.get_json()
+    nombre_lista = data.get('nombre')
+
+    if not nombre_lista:
+        return jsonify({'success': False, 'message': 'El nombre de la lista es requerido.'}), 400
+
+    # Crear una nueva lista
+    lista_id = contador_listas
+    listas[lista_id] = {
+        'id': lista_id,
+        'nombre': nombre_lista,
+        'libros': []
+    }
+    contador_listas += 1
+
+    return jsonify({'success': True, 'message': 'Lista creada correctamente.', 'lista_id': lista_id}), 201
+
+@app.route('/agregar_libro', methods=['POST'])
+def agregar_libro():
+    data = request.get_json()
+    libro_id = data.get('libro_id')  # Obtener el ID del libro
+    lista_id = data.get('lista_id')  # Puede ser un string, convertirlo a entero
+
+    # Verifica que el libro y la lista existan
+    if not libro_id or not lista_id:
+        return jsonify({'success': False, 'message': 'El libro ID y la lista ID son requeridos.'}), 400
+
+    try:
+        lista_id = int(lista_id)
+
+        if lista_id not in listas:
+            return jsonify({'success': False, 'message': f'La lista con ID {lista_id} no existe.'}), 404
+
+        # Agregar el libro a la lista correspondiente
+        listas[lista_id]['libros'].append(libro_id)
+
+        return jsonify({'success': True, 'message': 'Libro agregado correctamente.', 'libros': listas[lista_id]['libros']}), 201
+
+    except ValueError:
+        return jsonify({'success': False, 'message': 'El ID de la lista debe ser un número válido.'}), 400
+
+@app.route('/listas', methods=['GET'])
+def obtener_listas():
+    return jsonify({'success': True, 'listas': list(listas.values())}), 200
+
+listas_con_libros = []  # Inicializa la lista para almacenar listas con libros
+
 @app.route('/perfil')
 def perfil():
-    return render_template('perfil.html')
+
+    global listas_con_libros  # Indica que estás usando la variable global
+
+    listas_con_libros.clear()  # Limpia la lista para evitar duplicados
+
+    # Itera sobre cada lista en el diccionario 'listas'
+    for lista in listas.values():
+        # Obtener los libros correspondientes a los IDs de libros en la lista
+        libros_en_lista = []  # Inicializa una lista vacía para almacenar los libros
+        
+        # Iterar sobre los IDs de libros en la lista
+        for libro_id in lista['libros']:
+            # Buscar el libro en la lista de libros usando el ID (convertido a entero)
+            libro_encontrado = next((libro for libro in libros if libro['id'] == int(libro_id)), None)
+            if libro_encontrado:
+                libros_en_lista.append(libro_encontrado)
+
+        # Agregar la lista con los libros correspondientes
+        listas_con_libros.append({
+            'id': lista['id'],
+            'color': generar_color_pastel(),
+            'nombre': lista['nombre'],  # Nombre de la lista
+            'libros': libros_en_lista     # Libros asociados a esa lista
+        })
+
+        print(listas_con_libros)  # Esto imprimirá la lista actual de listas con libros en la consola para depuración
+
+    # Renderizar el perfil con las listas que contienen libros
+    return render_template('perfil.html', listas=listas_con_libros)
+
+@app.route('/lista/<int:lista_id>')
+def lista_individual(lista_id):
+    lista_seleccionada = listas.get(lista_id)
+
+    if lista_seleccionada is None:
+        return "Lista no encontrada", 404
+
+    libros_filtrados = []
+
+    for lista in listas_con_libros:
+        if lista['id'] == lista_seleccionada['id']:
+            # Solo agregar libros que estén en la lista_seleccionada
+            for libro in lista['libros']:
+                if str(libro['id']) in lista_seleccionada['libros']:
+                    libros_filtrados.append(libro)
+    
+    print(libros_filtrados)
+    print(lista_seleccionada)
+
+    return render_template('lista.html', lista=lista_seleccionada, libros=libros_filtrados)
 
 
 # Ruta principal para la página de inicio
@@ -70,44 +213,11 @@ def generar_color_pastel():
 
 @app.route('/')
 def inicio():
-    libros = [
-        {
-            "imagen": "rebelion.webp",
-            "titulo": "Rebelión en la granja",
-            "autor": "George Orwell"
-        },
-        {
-            "imagen": "1984.webp",
-            "titulo": "1984",
-            "autor": "George Orwell"
-        },
-        {
-            "imagen": "guerra_mundos.jpg",
-            "titulo": "La guerra de los mundos",
-            "autor": "H.G Wells"
-        },
-        {
-            "imagen": "carretera.jpg",
-            "titulo": "La carretera",
-            "autor": "Cormac McCarthy"
-        },
-        {
-            "imagen": "metamorfosis.jpg",
-            "titulo": "La metamorfosis",
-            "autor": "Franz Kakfa"
-        },
-        {
-            "imagen": "Frankie.jpg",
-            "titulo": "Frankenstein",
-            "autor": "Mary Shelley"
-        }
-    ]
-    
-    # Asignar un color pastel aleatorio a cada libro
+     # Asignar un color pastel aleatorio a cada libro
     for libro in libros:
         libro["color"] = generar_color_pastel()
     
-    return render_template('inicio.html', libros=libros)
+    return render_template('inicio.html', libros=libros, listas=listas.values())
 
 # Ruta para procesar el PDF y traducirlo a Braille
 @app.route('/upload', methods=['POST'])
@@ -124,9 +234,6 @@ def upload_pdf():
     # Guardar temporalmente el PDF
     file_path = os.path.join('temp_files', 'temp_pdf.pdf')
     pdf_file.save(file_path)
-
-    # Simular un proceso de carga largo (quitar esto en producción)
-    # time.sleep(5)  # Simula que el procesamiento tarda 5 segundos
 
     # Contar líneas de texto y procesarlas
     lines = lt.count_text_lines(file_path)
@@ -155,20 +262,6 @@ def download_braille():
 
     # Enviar el archivo para descargar
     return send_file(file_path, as_attachment=True, download_name='braille_document.pdf')
-
-# Función para contar líneas de texto en la imagen (la misma de Streamlit)
-def count_text_lines(pdf_path):
-    images = convert_from_path(pdf_path)
-    all_lines = []
-
-    for image in images:
-        preprocessed_image = lt.preprocess_image_for_ocr(image)
-        custom_config = r'--oem 3 --psm 4'
-        text = pytesseract.image_to_string(preprocessed_image, lang='spa', config=custom_config)
-        lines = [line for line in text.split('\n') if line.strip()]
-        all_lines.extend(lines)
-
-    return all_lines
 
 if __name__ == '__main__':
     app.run(debug=True)

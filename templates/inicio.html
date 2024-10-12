@@ -25,9 +25,9 @@
         }
         .tarjeta
         {
-            width: 185px;
+            width: 195px;
             margin-left: 5px;
-            height: 48vh;
+            height: 45vh;
             box-shadow: 0px 1px 1px rgb(69, 69, 69);
         }
 
@@ -53,6 +53,63 @@
             border-radius: 5px;
             height: 35px;
         }
+        /* Estilos generales del modal */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Contenido del modal */
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.7);
+            width: 300px;
+            text-align: center;
+        }
+
+        /* Botones del modal */
+        .modal-content button {
+            background-color: #6a4ac7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .modal-content button.cancel {
+            background-color: #d3c9f3;
+            color: #6a4ac7;
+        }
+
+        /* Estilos para el input */
+        .modal-content #input-text {
+            width: 80%;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        /* Botón de cerrar (X) */
+        .close {
+            float: right;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
 
     </style>
 </head>
@@ -71,26 +128,33 @@
             {% for libro in libros %}
             <div class="tarjeta">
                 <div class="color-tarjeta"  style="background-color: {{ libro.color }};" >
-                    <div style=" display: flex; justify-content: center; margin-top: 35px; width: 100%; height: 100%;">
-                        <img src="{{ url_for('static', filename='images/' + libro.imagen) }}" alt="" style=" width: 120px; height: 180px; object-fit: fill; box-shadow: 0px 1px 2px black;">
+                    <div style=" display: flex; justify-content: center; margin-top: 35px; width: 100%; height: 100%; ">
+                        <img src="{{ url_for('static', filename='images/' + libro.imagen) }}" alt="" style=" width: 120px; height: 180px; margin-bottom: 30px; object-fit: fill; box-shadow: 0px 1px 2px black;">
                     </div>
                     
                 </div>
 
-                <div style="margin-top: 90px;" >
-                    <h5 style="margin-left: 10px;">{{ libro.titulo }}</h5>
-                    <h6 style="margin-left: 10px;">{{ libro.autor }}</h6>
+                <div style="margin-top: 105px;" >
+                    <h5 style="margin:0px; margin-left: 10px; margin-bottom: 5px;">{{ libro.titulo }}</h5>
+                    <h6 style=" margin:0px; margin-left: 10px; margin-bottom: 20px; font-weight: 400;">{{ libro.autor }}</h6>
 
                     <div style="display: flex; justify-content: space-evenly; text-align: center;">
 
-                        <div class="boton-tarjeta" style="border-color: #72529C; background-color: #653F95; color: white;">
+                        <button class="boton-tarjeta" style="border-color: #653F95; background-color: #653F95; color: white;">
                             <p style="font-size: 12px; margin: 0px;">Descargar</p>
-                        </div>
+                        </button>
 
-                        <div class="boton-tarjeta" style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600;">
+                        {% if current_user.is_authenticated %}
+                        <button class="boton-tarjeta guardar-btn" 
+                                data-libro-id="{{ libro.id }}"
+                                style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600; cursor: pointer;">
                             <p style="font-size: 12px; margin: 0px;">Guardar</p>
-                        </div>
-
+                        </button>
+                        {% else %}
+                        <button  class="boton-tarjeta" style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600; cursor: pointer;">
+                            <p style="font-size: 12px; margin: 0px;"><a href="/login"  style="text-decoration: none;">Guardar</a></p>
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -100,14 +164,290 @@
     </section>
 
 
+        <!-- Modal para seleccionar o crear una lista -->
+        <div id="modal" class="modal">
+            <div class="modal-content" id="modal-content">
+
+                <div style="display: flex; flex-direction: row; justify-content: space-between; border-bottom: 2px solid #C5C5C5;">
+                    <h3 id="modal-title" style="margin: 0; margin-bottom: 10px;">Nueva lista</h3>
+                    <span class="close" id="close-btn">&times;</span>
+                </div>
+
+    
+                <div id="lista-contenido">
+                    <!-- Aquí aparecerán las listas, si existen -->
+                    <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; align-items: center; border-bottom: 2px solid  #C5C5C5;">
+                        {% for lista in listas %}
+                        <li style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <input name="lista" type="checkbox" id="checkbox1" value="{{lista.id}}" style="margin-right: 15px;">
+                            <label for="checkbox1" style="width: 100px; text-align: left;">{{lista.nombre}}</label>
+                        </li>
+                        {% endfor %}
+                    </ul>
+    
+                    <!-- Botón para agregar a la lista -->
+                    <button class="agregar-btn" style="width: 150px; background-color: #653F95;">Agregar a Lista</button>
+    
+                    <!-- Botón para crear nueva lista -->
+                    <button id="crear-lista-btn"  class="cancel crear-lista-btn" style="width: 150px; color: #6C479B; font-weight: 700;" >Nueva lista</button>
+                </div>
+    
+                <!-- Modal para crear una nueva lista -->
+                <div id="nueva-lista-contenido" style="display: none;">
+
+                    <h5 style="margin: 0; margin-top: 15px; text-align: left; margin-left: 50px; font-weight: 500;">Nombre de la lista</h5>
+                    <input id ="input-text" type="text" style="margin: 0; margin-bottom: 15px; margin-top: 2px;" placeholder="Favoritos">
+                    <button id="nueva-lista-confirm" style="background-color: #653F95;">Aceptar</button>
+                    <button class="cancel" id="cancelar-nueva-lista" style="color: #6C479B; font-weight: 700;">Cancelar</button>
+                </div>
+    
+            </div>
+        </div>
+
+        <script>
+            // Referencias a los elementos
+            const modal = document.getElementById('modal');
+            const modal_contenido = document.getElementById('modal-content')
+            const titulo = document.getElementById('modal-title')
+            const closeBtn = document.getElementById('close-btn');
+            const agregarBtn = document.getElementById('agregar-btn');
+            const crearListaBtn = document.getElementById('crear-lista-btn');
+            const nuevaListaContenido = document.getElementById('nueva-lista-contenido');
+            const listaContenido = document.getElementById('lista-contenido');
+            const cancelarNuevaListaBtn = document.getElementById('cancelar-nueva-lista');
+            const inputText = document.getElementById('input-text');
+            
+        
+            async function obtenerListas() 
+            {
+                try 
+                {
+                    const response = await fetch('/listas', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error en la red');
+                    }
+
+                    const data = await response.json();
+                    return data.listas; // Devuelve la lista de listas
+                } catch (error) 
+                {
+                    console.error('Hubo un problema con la petición Fetch:', error);
+                    return []; // Devuelve un array vacío en caso de error
+                }
+            }
 
 
+            async function verificarListas() 
+            {
+                const listas = await obtenerListas(); // Espera a que se resuelva la promesa
+                if (listas.length === 0) 
+                {
+                    console.log("No hay listas disponibles.");
+                    // Aquí puedes agregar la lógica para manejar el caso en que no haya listas
+                } 
+                else
+                 {
+                    console.log("Listas disponibles:", listas);
+                    // Aquí puedes manejar las listas disponibles
+                    // mostrarListas(listas);
+                }
+
+                return listas;
+            }
+
+            // Función principal para manejar el clic en el botón de guardar
+            function setupGuardarButtons() {
+                document.querySelectorAll('.guardar-btn').forEach(button => {
+                    button.addEventListener('click', handleGuardarClick);
+                });
+            }
 
 
+            async function agregarLibroALista(libroId, listaId) {
+                try {
+                    const response = await fetch('/agregar_libro', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            libro_id: libroId,
+                            lista_id: listaId
+                        })
+                    });
 
+                    const result = await response.json();
 
+                    if (response.ok) {
+                        alert(result.message);
+                        // Aquí puedes añadir lógica adicional si es necesario
+                    } else {
+                        alert('Error al agregar el libro: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error al intentar agregar el libro.');
+                }
+            }      
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+            async function handleGuardarClick() {
+                modal.style.display = "flex";
+                const libroId = this.getAttribute('data-libro-id');
+
+                try {
+                    const listas = await verificarListas();
+                    if (listas.length === 0) 
+                    {
+                        showNuevaListaForm(libroId);
+                    } else 
+                    {
+                        showExistingListas(libroId);
+                    }
+                } catch (error) {
+                    console.error("Error al verificar las listas:", error);
+                }
+            }
+
+            function showNuevaListaForm(libroId) {
+                modal_contenido.style.width = "500px";
+                listaContenido.style.display = "none";
+                nuevaListaContenido.style.display = "block";
+
+                document.getElementById('nueva-lista-confirm').onclick = () => handleNuevaListaConfirm(libroId);
+            }
+
+            async function showExistingListas(libroId) {
+                listaContenido.style.display = "block";
+                nuevaListaContenido.style.display = "none";
+
+                // Usa una clase en lugar de un id para seleccionar varios botones
+                document.querySelectorAll('.agregar-btn').forEach(button => {
+                    button.addEventListener('click', async function() {
+                        const listaSeleccionada = document.querySelector('input[name="lista"]:checked'); 
+
+                        if (listaSeleccionada)
+                        {
+                            const listaId = listaSeleccionada.value;
+                            try
+                             {
+                                await agregarLibroALista(libroId, listaId);
+                                // console.log('Libro agregado con éxito');
+                            } 
+                            catch (error)
+                            {
+                                console.error('Error al agregar el libro a la lista:', error);
+                            }
+                        } 
+                        else
+                        {
+                            alert('Por favor, selecciona una lista antes de agregar el libro.');
+                        }
+                    });
+
+                    document.getElementById('nueva-lista-confirm').onclick = () => handleNuevaListaConfirm(libroId);
+                });
+
+                // Aquí puedes añadir lógica para mostrar las listas existentes y permitir seleccionar una
+            }
+
+            async function handleNuevaListaConfirm(libroId) {
+                const nombre_lista = document.getElementById('input-text').value.trim();
+                if (nombre_lista) {
+                    try {
+                        const result = await crearNuevaLista(nombre_lista);
+                        if (result.success) {
+                            modal.style.display = "none";
+                            alert(result.message);
+                            await agregarLibroALista(libroId, result.lista_id);
+                        } else {
+                            alert('Error al crear la lista: ' + result.message);
+                        }
+                    } catch (error) {
+                        console.error('Error al crear la lista:', error);
+                        alert('Error al crear la lista. Por favor, intente de nuevo.');
+                    }
+                } else {
+                    alert('Por favor, ingrese un nombre para la lista.');
+                }
+            }
+
+            async function crearNuevaLista(nombre) {
+                const response = await fetch('/crear_lista', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ nombre: nombre })
+                });
+                return await response.json();
+            }
+
+            async function agregarLibroALista(libroId, listaId) {
+                try {
+                    const response = await fetch('/agregar_libro', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            libro_id: libroId,
+                            lista_id: listaId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        alert(result.message);
+                        window.location.reload();
+                        // Aquí puedes actualizar la UI para reflejar que el libro se ha añadido
+                    } else {
+                        alert('Error al agregar el libro: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error al intentar agregar el libro.');
+                }
+            }
+
+            // Inicializar la configuración de los botones
+            setupGuardarButtons();
+
+            // Cerrar modal cuando se haga clic en el botón de cerrar (X)
+            closeBtn.onclick = function() {
+                modal.style.display = "none";
+            }
+    
+            // Cerrar modal cuando se haga clic fuera del contenido del modal
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+    
+            // Cambiar a la opción de crear nueva lista
+            crearListaBtn.onclick = function() {
+                modal_contenido.style.width = '500px';
+                listaContenido.style.display = "none";
+                nuevaListaContenido.style.display = "block";
+            }
+    
+            // Volver al contenido de selección de lista
+            cancelarNuevaListaBtn.onclick = function() {
+                modal_contenido.style.width = '300px';
+                titulo.textContent = "Añadir a lista" 
+                listaContenido.style.display = "block";
+                nuevaListaContenido.style.display = "none";
+            }
+        
+        </script>
+
 </body>
 
 </html>
