@@ -1,14 +1,50 @@
+<style>
+
+    .actual:hover
+    {
+        font-weight: 700;
+    }
+
+    .sin_estilo
+    {
+        background: none;          /* Elimina el fondo */
+        border: none;              /* Quita el borde */
+        padding: 0;                /* Elimina el padding */
+        margin: 0;
+    }
+
+    select 
+    {
+        width: 75px;
+        height: 100%;
+        max-height: 100px;
+    }
+
+
+</style>
+
 <header>
   <div>
       <h2 style="margin-left: 5px; font-weight: 300; font-family: Poppins, sans-serif;" >Letras Inclusivas</h2>
   </div>
   <div class="search-bar">
-      <input type="text" placeholder="Alicia en el país de las maravillas">
-      <button type="submit">Buscar</button>
+    <form action="{{ url_for('buscar') }}" method="POST">
+        <input type="text" name="query" placeholder="Alicia en el país de las maravillas">
+        <button type="submit">Buscar</button>
+    </form>
   </div>
   <nav>
       <a href="/" style="font-size: small;">Inicio</a>
-      <a href="#" style="font-size: small;">Catálogo</a>
+      
+    <form action="{{ url_for('buscar_categoria') }}" method="POST">
+        <select name="query" class="sin_estilo" style="font-size: small; color: white;" onchange="this.form.submit()">
+            <option value="" style="color: black;" hidden>Catálogo</option>
+            <option value="Horror, terror, miedo" style="color: black;">Terror</option>
+            <option value="Clásicos, Literatura clásica " style="color: black;">Clásicos</option>
+            <option value="Ciencias, matemáticas, algebra, física" style="color: black;">Ciencias y matemáticas</option>
+        </select>
+    </form>
+      
       <a href="/traducir-archivo" class="translate-btn" style="font-size: small;">
           <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" style="filter: brightness(0) invert(1);"  alt="Icono de archivo">
           Traducir archivo
@@ -23,3 +59,5 @@
 
   </nav>
 </header>
+
+

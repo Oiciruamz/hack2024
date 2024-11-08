@@ -6,7 +6,165 @@ from app import main as mn
 from pdf2image import convert_from_path
 from app.pdfDown import PDF
 import LetrasInclusivas as lt
+import requests
 import os
+from typing import Dict, Optional
+
+
+import requests
+from typing import Dict, Optional
+
+def buscar_libros(query: str, max_results: int = 10) -> Optional[Dict]:
+    """
+    Busca libros en Google Books API y devuelve solo los que tienen imágenes.
+    
+    Args:
+        query (str): Término de búsqueda
+        max_results (int): Número máximo de resultados deseados con imágenes
+    
+    Returns:
+        dict: Datos de los libros encontrados (solo con imágenes) o None si hay error
+    """
+    try:
+        if not query:
+            raise ValueError("Query es obligatorio")
+            
+        base_url = "https://www.googleapis.com/books/v1/volumes"
+        
+        # Solicitamos más resultados de los necesarios para tener margen
+        # para filtrar los que no tienen imágenes
+        params = {
+            'q': query,
+            'key': 'AIzaSyAAUx82Bb6dJvUpJ2dZnWSNsejemaXhOY8',
+            'maxResults': min(40, max_results * 2),  # Pedimos el doble, máximo 40
+            'fields': 'items(volumeInfo(title,authors,description,imageLinks,categories,publishedDate))',  # Optimiza la respuesta
+        }
+        
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if 'items' not in data:
+            print("No se encontraron libros")
+            return None
+        
+        # Filtrar solo libros con imágenes
+        libros_con_imagenes = []
+        for libro in data['items']:
+            volumeInfo = libro.get('volumeInfo', {})
+            if (volumeInfo.get('imageLinks', {}).get('thumbnail') and 
+                volumeInfo.get('title') and  # Aseguramos que tenga título
+                volumeInfo.get('authors')):   # Aseguramos que tenga autores
+                
+                # Limpiamos y estructuramos los datos
+                libro_procesado = {
+                    'volumeInfo': {
+                        'title': volumeInfo['title'],
+                        'authors': volumeInfo['authors'],
+                        'description': volumeInfo.get('description', 'Descripción no disponible'),
+                        'imageLinks': {
+                            'thumbnail': volumeInfo['imageLinks']['thumbnail']
+                        },
+                        'categories': volumeInfo.get('categories', []),
+                        'publishedDate': volumeInfo.get('publishedDate', '')
+                    }
+                }
+                libros_con_imagenes.append(libro_procesado)
+                
+                # Si ya tenemos suficientes libros con imágenes, paramos
+                if len(libros_con_imagenes) >= max_results:
+                    break
+        
+        if not libros_con_imagenes:
+            print("No se encontraron libros con imágenes")
+            return None
+            
+        # Devolvemos en el mismo formato que la API original
+        return {'items': libros_con_imagenes}
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error en la petición HTTP: {e}")
+        return None
+    except ValueError as e:
+        print(f"Error de validación: {e}")
+        return None
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return None
+    
+
+def buscar_libros_categoria(categoria, max_results: int = 10) -> Optional[Dict]:
+        
+    try:
+        if not categoria:
+            raise ValueError("Query es obligatorio")
+            
+        base_url = "https://www.googleapis.com/books/v1/volumes"
+        
+        # Solicitamos más resultados de los necesarios para tener margen
+        # para filtrar los que no tienen imágenes
+        params = {
+            'q': f'categories:{categoria}',
+            'orderBy': 'relevance',
+            'key': 'AIzaSyAAUx82Bb6dJvUpJ2dZnWSNsejemaXhOY8',
+            'maxResults': min(40, max_results * 2),  
+            'langRestrict': 'es',
+            'fields': 'items(volumeInfo(title,authors,description,imageLinks,categories,publishedDate))',  # Optimiza la respuesta
+        }
+
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if 'items' not in data:
+            print("No se encontraron libros")
+            return None
+        
+        # Filtrar solo libros con imágenes
+        libros_con_imagenes = []
+        for libro in data['items']:
+            volumeInfo = libro.get('volumeInfo', {})
+            if (volumeInfo.get('imageLinks', {}).get('thumbnail') and 
+                volumeInfo.get('title') and  # Aseguramos que tenga título
+                volumeInfo.get('authors')):   # Aseguramos que tenga autores
+                
+                # Limpiamos y estructuramos los datos
+                libro_procesado = {
+                    'volumeInfo': {
+                        'title': volumeInfo['title'],
+                        'authors': volumeInfo['authors'],
+                        'description': volumeInfo.get('description', 'Descripción no disponible'),
+                        'imageLinks': {
+                            'thumbnail': volumeInfo['imageLinks']['thumbnail']
+                        },
+                        'categories': volumeInfo.get('categories', []),
+                        'publishedDate': volumeInfo.get('publishedDate', '')
+                    }
+                }
+                libros_con_imagenes.append(libro_procesado)
+                
+                # Si ya tenemos suficientes libros con imágenes, paramos
+                if len(libros_con_imagenes) >= max_results:
+                    break
+        
+        if not libros_con_imagenes:
+            print("No se encontraron libros con imágenes")
+            return None
+            
+        # Devolvemos en el mismo formato que la API original
+        return {'items': libros_con_imagenes}
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Error en la petición HTTP: {e}")
+        return None
+    except ValueError as e:
+        print(f"Error de validación: {e}")
+        return None
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return None
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jeje_lol'  # Cambia esto por una clave secreta real
@@ -245,6 +403,43 @@ def upload_pdf():
     # Renderizar el resultado en la página
     return render_template('traducir-completado.html', braille=braille)
 
+@app.route('/buscar', methods=['POST'])
+def buscar():
+    """Ruta que procesa la búsqueda y redirecciona a los resultados"""
+    query = request.form.get('query', '')
+    if not query:
+        return redirect(url_for('index'))
+        
+    resultados = buscar_libros(query)
+    
+    print(resultados)
+    if resultados is None:
+        # Manejar el error redirigiendo con un mensaje
+        return redirect(url_for('index'))
+    
+    # Guardar los resultados en la sesión o pasarlos como parámetro
+    return render_template('resultados.html', 
+                         libros=resultados.get('items', []),
+                         query=query)
+
+@app.route('/buscar_x_categoria', methods=['POST'])
+def buscar_categoria():
+    """Ruta que procesa la búsqueda y redirecciona a los resultados"""
+    query = request.form.get('query', '')
+    if not query:
+        return redirect(url_for('index'))
+        
+    resultados = buscar_libros_categoria(query)
+    
+    print(resultados)
+    if resultados is None:
+        # Manejar el error redirigiendo con un mensaje
+        return redirect(url_for('index'))
+    
+    # Guardar los resultados en la sesión o pasarlos como parámetro
+    return render_template('resultados.html', 
+                         libros=resultados.get('items', []),
+                         query=query)    
 
 
 @app.route('/registro')
