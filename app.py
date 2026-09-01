@@ -1,18 +1,37 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify 
+import importlib.util
+import os
+import sys
+from pathlib import Path
+import random
+import uuid
+import requests
+from typing import Dict, Optional
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+PACKAGE_DIR = PROJECT_ROOT / "app"
+
+spec_pkg = importlib.util.spec_from_file_location("app", PACKAGE_DIR / "__init__.py")
+app_pkg = importlib.util.module_from_spec(spec_pkg)
+app_pkg.__path__ = [str(PACKAGE_DIR)]
+sys.modules["app"] = app_pkg
+spec_pkg.loader.exec_module(app_pkg)
+
+spec_main = importlib.util.spec_from_file_location("app.main", PACKAGE_DIR / "main.py")
+mn = importlib.util.module_from_spec(spec_main)
+sys.modules["app.main"] = mn
+spec_main.loader.exec_module(mn)
+
+spec_pdfdown = importlib.util.spec_from_file_location("app.pdfDown", PACKAGE_DIR / "pdfDown.py")
+pdfDown_mod = importlib.util.module_from_spec(spec_pdfdown)
+sys.modules["app.pdfDown"] = pdfDown_mod
+spec_pdfdown.loader.exec_module(pdfDown_mod)
+PDF = pdfDown_mod.PDF
+
+from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-import random
-from app import main as mn
 from pdf2image import convert_from_path
-from app.pdfDown import PDF
 import LetrasInclusivas as lt
-import requests
-import os
-from typing import Dict, Optional
-
-
-import requests
-from typing import Dict, Optional
 
 def buscar_libros(query: str, max_results: int = 10) -> Optional[Dict]:
     """
@@ -384,6 +403,9 @@ def upload_pdf():
         return 'No PDF file part', 400
     
     pdf_file = request.files['pdf_file']
+    
+    # Obtener el nombre original sin la extensión
+    original_filename = os.path.splitext(pdf_file.filename)[0]
 
     # Crear directorio temporal si no existe
     if not os.path.exists('temp_files'):
@@ -395,13 +417,19 @@ def upload_pdf():
 
     # Contar líneas de texto y procesarlas
     lines = lt.count_text_lines(file_path)
-    texto = " ".join(lines)
+    texto = "\n".join(lines)
 
     # Convertir a Braille
     braille = mn.user_text(texto)
 
+    # Guardar el texto Braille temporalmente para descargarlo luego
+    download_id = uuid.uuid4().hex
+    braille_path = os.path.join('temp_files', f'{download_id}.txt')
+    with open(braille_path, 'w', encoding='utf-8') as f:
+        f.write(braille)
+
     # Renderizar el resultado en la página
-    return render_template('traducir-completado.html', braille=braille)
+    return render_template('traducir-completado.html', download_id=download_id, original_filename=original_filename)
 
 @app.route('/buscar', methods=['POST'])
 def buscar():
@@ -448,15 +476,132 @@ def registro():
 
 @app.route('/download_braille', methods=['POST'])
 def download_braille():
-    text = request.form['braille']  # Obtiene el texto de braille desde el formulario
-    file_path = os.path.join('temp_files', 'mi_documento_braille.pdf')
+    download_id = request.form.get('download_id')
+    original_filename = request.form.get('original_filename', 'braille_document')
+    
+    if not download_id:
+        return 'Descarga inválida', 400
+
+    braille_file = os.path.join('temp_files', f'{download_id}.txt')
+    if not os.path.exists(braille_file):
+        return 'Archivo Braille no encontrado', 404
+
+    with open(braille_file, 'r', encoding='utf-8') as f:
+        text = f.read()
+    if not os.path.exists('temp_files'):
+        os.makedirs('temp_files')
+    file_path = os.path.join('temp_files', f'{download_id}.pdf')
 
     # Crear el PDF
     pdf = PDF()
     pdf.download_braille(text, file_path)
 
-    # Enviar el archivo para descargar
-    return send_file(file_path, as_attachment=True, download_name='braille_document.pdf')
+    # Enviar el archivo para descargar con el nombre original modificado
+    return send_file(file_path, as_attachment=True, download_name=f'{original_filename}_braille.pdf')
+
+@app.route('/download_brf', methods=['POST'])
+def download_brf():
+    download_id = request.form.get('download_id')
+    original_filename = request.form.get('original_filename', 'braille_document')
+    
+    if not download_id:
+        return 'Descarga inválida', 400
+
+    braille_file = os.path.join('temp_files', f'{download_id}.txt')
+    if not os.path.exists(braille_file):
+        return 'Archivo Braille no encontrado', 404
+
+    # Enviar directamente el archivo de texto pero con extensión .brf
+    return send_file(braille_file, as_attachment=True, download_name=f'{original_filename}.brf')
+
+import re
+
+def sanitizar_nombre_archivo(nombre: str) -> str:
+    """Limpia un string para que sea un nombre de archivo seguro."""
+    if not nombre:
+        return "libro"
+    # Eliminar caracteres ilegales en Windows/Linux: \ / : * ? " < > |
+    nombre_limpio = re.sub(r'[\\/*?:"<>|]', '', str(nombre))
+    # Reemplazar múltiples espacios o saltos de línea por un solo espacio
+    nombre_limpio = re.sub(r'\s+', ' ', nombre_limpio).strip()
+    return nombre_limpio if nombre_limpio else "libro"
+
+@app.route('/descargar_libro', methods=['GET', 'POST'])
+def descargar_libro():
+    titulo = request.values.get('titulo', '').strip()
+    if not titulo:
+        titulo = 'libro_predeterminado'
+    
+    nombre_archivo = sanitizar_nombre_archivo(titulo)
+    if not nombre_archivo.lower().endswith('.pdf'):
+        nombre_descarga = f"{nombre_archivo}.pdf"
+    else:
+        nombre_descarga = nombre_archivo
+
+    predeterminado_path = PROJECT_ROOT / "resources" / "Predeterminado.pdf"
+    if not predeterminado_path.exists():
+        return "Archivo predeterminado no encontrado", 404
+        
+    return send_file(str(predeterminado_path), as_attachment=True, download_name=nombre_descarga)
+
+def parse_braille_tables(text):
+    tables = []
+    
+    # Buscar bloques entre [Inicio De Tabla] y [Fin De Tabla], cruzando saltos de línea
+    pattern = r'\[\s*INICIO\s+DE\s+TABLA\s*\](.*?)\[\s*FIN\s+DE\s+TABLA\s*\]'
+    
+    for table_match in re.finditer(pattern, text, flags=re.IGNORECASE | re.DOTALL):
+        table_text = table_match.group(1)
+        
+        # Buscar "Fila X, Columna Y:" tolerando espacios y saltos de línea
+        cell_pattern = r'Fila\s+(\d+)\s*,\s*Columna\s+(\d+)\s*:'
+        matches = list(re.finditer(cell_pattern, table_text, flags=re.IGNORECASE))
+        
+        if not matches:
+            continue
+            
+        current_table = {}
+        for i, match in enumerate(matches):
+            r = int(match.group(1))
+            c = int(match.group(2))
+            
+            start_val = match.end()
+            if i + 1 < len(matches):
+                end_val = matches[i+1].start()
+            else:
+                end_val = len(table_text)
+                
+            val = table_text[start_val:end_val]
+            val = " ".join(val.split())
+            current_table[(r, c)] = val
+            
+        max_row = max((k[0] for k in current_table.keys()), default=0)
+        max_col = max((k[1] for k in current_table.keys()), default=0)
+        
+        if max_row > 0 and max_col > 0:
+            matrix = []
+            for r_idx in range(1, max_row + 1):
+                row_data = []
+                for c_idx in range(1, max_col + 1):
+                    row_data.append(current_table.get((r_idx, c_idx), ''))
+                matrix.append(row_data)
+            tables.append(matrix)
+            
+    return tables
+
+@app.route('/braille-a-texto', methods=['GET', 'POST'])
+def braille_a_texto():
+    if request.method == 'POST':
+        braille_text = request.form.get('braille_text', '')
+        # Traducir el texto usando main.user_braille
+        translated_text = mn.user_braille(braille_text)
+        
+        # Extraer posibles tablas
+        tables = parse_braille_tables(translated_text)
+        
+        return render_template('braille-resultado.html', translated_text=translated_text, tables=tables)
+        
+    return render_template('braille-a-texto.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

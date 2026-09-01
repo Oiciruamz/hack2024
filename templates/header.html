@@ -49,6 +49,9 @@
           <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" style="filter: brightness(0) invert(1);"  alt="Icono de archivo">
           Traducir archivo
       </a>
+      <a href="/braille-a-texto" class="translate-btn" style="font-size: small;">
+          Traductor Braille
+      </a>
       {% if current_user.is_authenticated %}
       <!-- Si el usuario ha iniciado sesión -->
       <a href="/perfil" style="font-size: small; font-weight: 600;"> {{ current_user.email }}</a>

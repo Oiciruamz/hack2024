@@ -236,13 +236,25 @@
     <div class="container">
         <h1>Archivo PDF traducido a código Braille</h1>
 
-        <form action="/download_braille" method="POST">
-            <input type="hidden" name="braille" value="{{braille}}">
-            <button type="submit" class="descargar" style="font-size: medium;">
-                <img src="{{ url_for('static', filename='images/descargar.png') }}" style="filter: brightness(0) invert(1);" alt="Icono de descargar">
-                Descargar Archivo
-            </button>
-        </form>
+        <div style="display: flex; gap: 20px; justify-content: center;">
+            <form action="/download_braille" method="POST">
+                <input type="hidden" name="download_id" value="{{download_id}}">
+                <input type="hidden" name="original_filename" value="{{original_filename}}">
+                <button type="submit" class="descargar" style="font-size: medium; background-color: #6A36B3;">
+                    <img src="{{ url_for('static', filename='images/descargar.png') }}" style="filter: brightness(0) invert(1);" alt="Icono de descargar">
+                    Descargar en PDF
+                </button>
+            </form>
+
+            <form action="/download_brf" method="POST">
+                <input type="hidden" name="download_id" value="{{download_id}}">
+                <input type="hidden" name="original_filename" value="{{original_filename}}">
+                <button type="submit" class="descargar" style="font-size: medium; background-color: #2b292d;">
+                    <img src="{{ url_for('static', filename='images/descargar.png') }}" style="filter: brightness(0) invert(1);" alt="Icono de descargar">
+                    Descargar en BRF
+                </button>
+            </form>
+        </div>
 
         <!-- <p style="font-size: 20px; font-weight: bold; margin-bottom: 20px;">ó</p>
 

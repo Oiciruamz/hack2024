@@ -11,34 +11,59 @@ Letras Inclusivas es una herramienta innovadora diseñada para convertir texto e
 - **Compatibilidad:** Compatible con una amplia gama de dispositivos, incluyendo smartphones, tablets y computadoras.
 - **Asequibilidad:** Solución económica para ampliar su alcance y beneficiar a más personas.
 
+## Requisitos Previos del Sistema
+
+Para el procesamiento de documentos escaneados e imágenes a texto y Braille, se requiere tener instaladas las siguientes herramientas en tu sistema operativo:
+
+- **Tesseract OCR:** Motor de reconocimiento óptico de caracteres (OCR).
+  - *Windows:* Instalar desde el instalador oficial de Tesseract y asegurarse de agregar los datos de idioma español (`spa.traineddata`).
+  - *Ubuntu/Debian:* `sudo apt-get install tesseract-ocr tesseract-ocr-spa`
+  - *macOS:* `brew install tesseract tesseract-lang`
+- **Poppler:** Necesario para que `pdf2image` pueda convertir páginas de PDF en imágenes.
+  - *Windows:* Descargar los binarios de Poppler y agregarlos al PATH.
+  - *Ubuntu/Debian:* `sudo apt-get install poppler-utils`
+  - *macOS:* `brew install poppler`
+
 ## Instalación
 
 Sigue estos pasos para instalar y ejecutar la aplicación:
 
-1. **Configura un entorno virtual** (opcional, pero recomendado):
+1. **Clona el repositorio:**
     ```bash
-    python -m venv env
-    source myenv/bin/activate  # En Windows usa `env\Scripts\activate`
+    git clone https://github.com/Oiciruamz/hack2024.git
+    cd hack2024
     ```
 
-2. **Clona el repositorio:**
+2. **Configura y activa un entorno virtual:**
     ```bash
-    git clone https://github.com/Oiciruamz/hack2024
+    # En Linux / macOS:
+    python -m venv venv
+    source venv/bin/activate
+
+    # En Windows (PowerShell / CMD):
+    python -m venv venv
+    venv\Scripts\activate
     ```
 
-3. **Navega al directorio del proyecto:**
-    ```bash
-    cd HACK2024
-    ```
-
-4. **Instala las dependencias necesarias:**
+3. **Instala las dependencias necesarias:**
     ```bash
     pip install -r requirements.txt
     ```
 
 ## Uso
 
-Para correr la aplicación, utiliza el siguiente comando:
+Para iniciar el servidor web de la aplicación (Flask):
 
 ```bash
-streamlit run LetrasInclusivas.py
+python app.py
+```
+
+Luego, abre tu navegador web e ingresa a:
+```
+http://localhost:5000
+```
+
+### Funcionalidades Disponibles:
+- **Traducción de PDF a Braille:** Sube un archivo PDF para extraer su texto y generar el documento Braille (descargable en formato PDF o BRF).
+- **Traductor Braille a Texto:** Pega código Braille unicode para convertirlo a texto en español y estructurar tablas automáticamente.
+- **Biblioteca y Búsqueda:** Explora libros recomendados o busca títulos y categorías mediante integración con Google Books.

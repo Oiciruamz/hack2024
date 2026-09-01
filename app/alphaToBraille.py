@@ -36,9 +36,9 @@ def is_braille(char):
 
 def trim(word):
     # Remove punctuation around a word. Example: cat." becomes cat
-    while len(word) is not 0 and not word[0].isalnum():
+    while len(word) != 0 and not word[0].isalnum():
         word = word[1:]
-    while len(word) is not 0 and not word[-1].isalnum():
+    while len(word) != 0 and not word[-1].isalnum():
         word = word[:-1]
     return word
 
@@ -95,7 +95,6 @@ def char_to_braille(char):
     elif char in mapAlphaToBraille.punctuation:
         return mapAlphaToBraille.punctuation.get(char)
     else:
-        print("Unrecognized Symbol:", char, "with UTF code:", find_utf_code(char))
         return UNRECOGNIZED
 
 
@@ -113,7 +112,7 @@ def build_braille_word(trimmed_word, shavings, index, braille):
         braille += word_to_braille(trimmed_word)
     else:
         for i in range(0, len(shavings)):
-            if i == index and trimmed_word is not "":
+            if i == index and trimmed_word != "":
                 braille += word_to_braille(trimmed_word)
             braille += word_to_braille(shavings[i])
         if index == len(shavings):  # If the shavings are all at the beginning.

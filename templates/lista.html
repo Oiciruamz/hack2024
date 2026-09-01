@@ -99,9 +99,9 @@
 
                     <div style="display: flex; justify-content: space-evenly; text-align: center;">
 
-                        <button class="boton-tarjeta" style="border-color: #653F95; background-color: #653F95; color: white;">
+                        <a href="{{ url_for('descargar_libro', titulo=libro.titulo) }}" class="boton-tarjeta" style="border-color: #653F95; background-color: #653F95; color: white; text-decoration: none; cursor: pointer;">
                             <p style="font-size: 12px; margin: 0px;">Descargar</p>
-                        </button>
+                        </a>
 
                         <button class="boton-tarjeta guardar-btn" 
                                 data-libro-id="{{ libro.id }}"

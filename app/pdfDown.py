@@ -3,20 +3,21 @@ import os
 
 class PDF(FPDF):
     def header(self):
-        self.set_font("Arial", "B", 12)
-        self.cell(0, 10, "Texto en Braille", 0, 1, "C")
+        pass
+
     
     def footer(self):
-        self.set_y(-15)
-        self.set_font("Arial", "I", 8)
-        self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "C")
+        pass
+
 
     def download_braille(self, text, file_path):
         # Agregar una página
         self.add_page()
 
         # Agregar la fuente Unicode (DejaVu Sans)
-        self.add_font("DejaVu", "", "./resources/DejaVuSans.ttf", uni=True)
+        font_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'DejaVuSans.ttf')
+        font_path = os.path.abspath(font_path)
+        self.add_font("DejaVu", "", font_path, uni=True)
 
         # Establecer fuente DejaVu Sans
         self.set_font("DejaVu", size=20)
