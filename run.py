@@ -8,6 +8,7 @@ import requests
 from typing import Dict, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+os.chdir(PROJECT_ROOT)
 PACKAGE_DIR = PROJECT_ROOT / "app"
 
 spec_pkg = importlib.util.spec_from_file_location("app", PACKAGE_DIR / "__init__.py")
@@ -27,6 +28,7 @@ sys.modules["app.pdfDown"] = pdfDown_mod
 spec_pdfdown.loader.exec_module(pdfDown_mod)
 PDF = pdfDown_mod.PDF
 TEMP_FILES_DIR = str(PROJECT_ROOT / "temp_files")
+os.makedirs(TEMP_FILES_DIR, exist_ok=True)
 
 from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -484,18 +486,30 @@ def download_braille():
         return 'Descarga inválida', 400
 
     braille_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
+    # Respaldo si el archivo se creó en la ruta temporal antigua del home
+    if not os.path.exists(braille_file):
+        home_temp = os.path.join(os.path.expanduser('~'), 'temp_files', f'{download_id}.txt')
+        if os.path.exists(home_temp):
+            braille_file = home_temp
+
     if not os.path.exists(braille_file):
         return 'Archivo Braille no encontrado', 404
 
     with open(braille_file, 'r', encoding='utf-8') as f:
         text = f.read()
-    if not os.path.exists(TEMP_FILES_DIR):
-        os.makedirs(TEMP_FILES_DIR)
+    
+    os.makedirs(TEMP_FILES_DIR, exist_ok=True)
     file_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.pdf')
 
     # Crear el PDF
     pdf = PDF()
     pdf.download_braille(text, file_path)
+
+    # Verificación de seguridad por si se guardó en ~/temp_files
+    if not os.path.exists(file_path):
+        home_pdf = os.path.join(os.path.expanduser('~'), 'temp_files', f'{download_id}.pdf')
+        if os.path.exists(home_pdf):
+            file_path = home_pdf
 
     # Enviar el archivo para descargar con el nombre original modificado
     return send_file(file_path, as_attachment=True, download_name=f'{original_filename}_braille.pdf')
@@ -509,6 +523,11 @@ def download_brf():
         return 'Descarga inválida', 400
 
     braille_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
+    if not os.path.exists(braille_file):
+        home_temp = os.path.join(os.path.expanduser('~'), 'temp_files', f'{download_id}.txt')
+        if os.path.exists(home_temp):
+            braille_file = home_temp
+
     if not os.path.exists(braille_file):
         return 'Archivo Braille no encontrado', 404
 
