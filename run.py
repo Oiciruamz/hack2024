@@ -26,6 +26,7 @@ pdfDown_mod = importlib.util.module_from_spec(spec_pdfdown)
 sys.modules["app.pdfDown"] = pdfDown_mod
 spec_pdfdown.loader.exec_module(pdfDown_mod)
 PDF = pdfDown_mod.PDF
+TEMP_FILES_DIR = str(PROJECT_ROOT / "temp_files")
 
 from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -408,11 +409,11 @@ def upload_pdf():
     original_filename = os.path.splitext(pdf_file.filename)[0]
 
     # Crear directorio temporal si no existe
-    if not os.path.exists('temp_files'):
-        os.makedirs('temp_files')
+    if not os.path.exists(TEMP_FILES_DIR):
+        os.makedirs(TEMP_FILES_DIR)
 
     # Guardar temporalmente el PDF
-    file_path = os.path.join('temp_files', 'temp_pdf.pdf')
+    file_path = os.path.join(TEMP_FILES_DIR, 'temp_pdf.pdf')
     pdf_file.save(file_path)
 
     # Contar líneas de texto y procesarlas
@@ -424,7 +425,7 @@ def upload_pdf():
 
     # Guardar el texto Braille temporalmente para descargarlo luego
     download_id = uuid.uuid4().hex
-    braille_path = os.path.join('temp_files', f'{download_id}.txt')
+    braille_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
     with open(braille_path, 'w', encoding='utf-8') as f:
         f.write(braille)
 
@@ -482,15 +483,15 @@ def download_braille():
     if not download_id:
         return 'Descarga inválida', 400
 
-    braille_file = os.path.join('temp_files', f'{download_id}.txt')
+    braille_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
     if not os.path.exists(braille_file):
         return 'Archivo Braille no encontrado', 404
 
     with open(braille_file, 'r', encoding='utf-8') as f:
         text = f.read()
-    if not os.path.exists('temp_files'):
-        os.makedirs('temp_files')
-    file_path = os.path.join('temp_files', f'{download_id}.pdf')
+    if not os.path.exists(TEMP_FILES_DIR):
+        os.makedirs(TEMP_FILES_DIR)
+    file_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.pdf')
 
     # Crear el PDF
     pdf = PDF()
@@ -507,7 +508,7 @@ def download_brf():
     if not download_id:
         return 'Descarga inválida', 400
 
-    braille_file = os.path.join('temp_files', f'{download_id}.txt')
+    braille_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
     if not os.path.exists(braille_file):
         return 'Archivo Braille no encontrado', 404
 

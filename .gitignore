@@ -177,3 +177,5 @@ fabric.properties
 # Project temporary and generated files
 temp_files/*
 !temp_files/.gitkeep
+*.pkl
+

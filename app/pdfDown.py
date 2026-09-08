@@ -17,7 +17,18 @@ class PDF(FPDF):
         # Agregar la fuente Unicode (DejaVu Sans)
         font_path = os.path.join(os.path.dirname(__file__), '..', 'resources', 'DejaVuSans.ttf')
         font_path = os.path.abspath(font_path)
-        self.add_font("DejaVu", "", font_path, uni=True)
+
+        # Compatible con fpdf2 y PyFPDF clásico
+        try:
+            self.add_font("DejaVu", "", font_path)
+        except TypeError:
+            self.add_font("DejaVu", "", font_path, uni=True)
+
+        # Si PyFPDF cargó un archivo de cache con ruta relativa antigua, forzar ruta absoluta
+        if hasattr(self, 'fonts') and isinstance(self.fonts, dict):
+            for k in list(self.fonts.keys()):
+                if isinstance(self.fonts[k], dict) and 'ttffile' in self.fonts[k]:
+                    self.fonts[k]['ttffile'] = font_path
 
         # Establecer fuente DejaVu Sans
         self.set_font("DejaVu", size=20)
@@ -37,4 +48,4 @@ def create_pdf(text, file_path):
 text = "⠠⠇⠑⠗⠁⠎ ⠊⠝⠉⠇⠥⠎⠊⠧⠁⠎"
 
 # Ruta a la fuente DejaVu Sans TTF
-font_path = "DejaVuSans.ttf"
+font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'resources', 'DejaVuSans.ttf'))
