@@ -1,26 +1,233 @@
 <style>
+    /* Reset de box-sizing para el header y sus elementos */
+    header, header *, header *::before, header *::after {
+        box-sizing: border-box;
+    }
 
-    .actual:hover
-    {
+    header {
+        background-color: #6A36B3;
+        padding: 8px 30px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+        position: relative;
+    }
+
+    header h2 {
+        margin: 0;
+        white-space: nowrap;
+        font-weight: 300;
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.5rem;
+    }
+
+    /* Contenedor de la barra de búsqueda */
+    .search-bar {
+        display: flex;
+        align-items: center;
+        background-color: white;
+        border-radius: 10px;
+        padding: 4px 6px 4px 14px;
+        border: 1px solid transparent;
+        transition: all 0.3s;
+        flex: 0 1 480px;
+        max-width: 480px;
+        width: 100%;
+        min-width: 200px;
+    }
+
+    /* Formulario: garantiza que el input y el botón Buscar siempre estén lado a lado */
+    .search-bar form {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Input de texto flexible que se adapta al espacio sin forzar salto */
+    .search-bar input[type="text"] {
+        border: none;
+        outline: none;
+        padding: 8px 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        background: transparent;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.9em;
+        color: #333;
+        border-radius: 0;
+    }
+
+    .search-bar input[type="text"]::placeholder {
+        color: #757575;
+        text-overflow: ellipsis;
+    }
+
+    /* Botón Buscar: fijo a la derecha, nunca se encoge ni salta de línea */
+    .search-bar button {
+        background-color: #2b292d;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 18px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        flex-shrink: 0;
+        white-space: nowrap;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+
+    .search-bar button:hover {
+        background-color: #773bd7;
+    }
+
+    header nav {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        gap: 6px;
+    }
+
+    header nav a {
+        color: white;
+        text-decoration: none;
+        margin: 0 6px;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    header nav a:hover {
+        text-decoration: underline;
+    }
+
+    header nav a img {
+        margin-right: 5px;
+        width: 15px;
+        height: 15px;
+    }
+
+    header nav form {
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    header .btn {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.247);
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        margin-left: 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .actual:hover {
         font-weight: 700;
     }
 
-    .sin_estilo
-    {
-        background: none;          /* Elimina el fondo */
-        border: none;              /* Quita el borde */
-        padding: 0;                /* Elimina el padding */
+    .sin_estilo {
+        background: none;
+        border: none;
+        padding: 0;
         margin: 0;
+        cursor: pointer;
     }
 
-    select 
-    {
+    select {
         width: 75px;
         height: 100%;
         max-height: 100px;
+        cursor: pointer;
     }
 
+    /* Responsividad */
+    @media (max-width: 960px) {
+        header {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 12px 20px;
+            gap: 12px;
+        }
 
+        header > div:first-child {
+            text-align: center;
+        }
+
+        header h2 {
+            font-size: 1.4em;
+            text-align: center;
+            margin: 0;
+        }
+
+        .search-bar {
+            order: 2;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        header nav {
+            order: 3;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px 12px;
+            width: 100%;
+        }
+
+        header nav a, header nav form, header .btn {
+            margin: 2px 4px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        header {
+            padding: 10px 14px;
+            gap: 10px;
+        }
+
+        header h2 {
+            font-size: 1.25em;
+        }
+
+        .search-bar {
+            padding: 3px 5px 3px 10px;
+        }
+
+        .search-bar input[type="text"] {
+            font-size: 0.85em;
+        }
+
+        .search-bar button {
+            padding: 7px 14px;
+            font-size: 0.85em;
+        }
+
+        header nav {
+            gap: 6px 8px;
+        }
+
+        header nav a {
+            font-size: 0.8em !important;
+            margin: 0 2px;
+        }
+
+        header .btn {
+            font-size: 0.8em !important;
+            padding: 2px 6px;
+        }
+    }
 </style>
 
 <header>

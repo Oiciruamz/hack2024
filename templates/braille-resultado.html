@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header_inicio.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">  
     <title>Resultado de Traducción</title>
     <style>
@@ -14,46 +15,6 @@
             background-color: #f5f5f5;
             margin: 0;
             padding: 0;
-        }
-
-        header {
-            background-color: #6A36B3;
-            padding: 5px 40px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .search-bar {
-            display: flex;
-            align-items: center;
-            background-color: white;
-            border-radius: 10px;
-            padding: 5px;
-        }
-        .search-bar input[type="text"] {
-            border: none;
-            outline: none;
-            padding: 10px;
-            width: 500px;
-            border-radius: 20px 0 0 20px;
-        }
-        .search-bar button {
-            background-color: #2b292d;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-            cursor: pointer;
-        }
-        header nav { display: flex; align-items: center; }
-        header nav a { color: white; text-decoration: none; margin: 0 8px; }
-        header nav a img {
-            margin-left: 2px;
-            width: 15px;
-            height: 15px;
-            margin-right: 5px;
         }
 
         .container {
@@ -168,5 +129,6 @@
         </div>
     </div>
 
+    {% include 'footer.html' %}
 </body>
 </html>

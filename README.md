@@ -55,7 +55,7 @@ Sigue estos pasos para instalar y ejecutar la aplicación:
 Para iniciar el servidor web de la aplicación (Flask):
 
 ```bash
-python app.py
+python run.py
 ```
 
 Luego, abre tu navegador web e ingresa a:

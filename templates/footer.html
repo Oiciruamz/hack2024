@@ -1,0 +1,248 @@
+<!-- Footer Letras Inclusivas (Estilo Compacto inspirado en Scribd) -->
+<style>
+    /* Layout sticky footer */
+    body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Estilos del Footer */
+    .site-footer {
+        background-color: #131217; /* Negro profundo accesible, no #000000 */
+        color: #ede8f5;
+        font-family: 'Poppins', sans-serif;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: none;
+        margin-top: auto;
+        width: 100%;
+        position: relative;
+        z-index: 10;
+    }
+
+    .footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 22px 30px 14px 30px;
+    }
+
+    /* Grid de Columnas estilo Scribd */
+    .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 30px;
+        margin-bottom: 16px;
+    }
+
+    .footer-col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .footer-col h4 {
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin: 0 0 10px 0;
+        letter-spacing: -0.2px;
+    }
+
+    .footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .footer-links li a, 
+    .footer-category-btn {
+        color: #ede8f5; /* Alta legibilidad por defecto sin necesidad de hover */
+        text-decoration: none;
+        font-size: 0.80rem;
+        font-weight: 450;
+        line-height: 1.5;
+        transition: color 0.15s ease;
+        display: inline-block;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        font-family: inherit;
+        text-align: left;
+    }
+
+    .footer-links li a:hover,
+    .footer-category-btn:hover {
+        color: #ffffff;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .footer-links li a:focus-visible,
+    .footer-category-btn:focus-visible {
+        outline: 2px solid #c084fc;
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
+
+    /* Barra Inferior estilo Scribd */
+    .footer-bottom {
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .footer-copyright {
+        font-size: 0.78rem;
+        color: #ede8f5; /* Alto contraste legible */
+        font-weight: 450;
+        margin: 0;
+    }
+
+    .scroll-top-btn {
+        background: #211f29;
+        border: 1px solid #8f85a6;
+        color: #ffffff;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .scroll-top-btn:hover {
+        background: #6a36b3;
+        border-color: #c084fc;
+        transform: translateY(-2px);
+    }
+
+    .scroll-top-btn:focus-visible {
+        outline: 2px solid #c084fc;
+        outline-offset: 2px;
+    }
+
+    /* Adaptabilidad Móvil */
+    @media (max-width: 900px) {
+        .footer-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .footer-container {
+            padding: 20px 18px 12px 18px;
+        }
+
+        .footer-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+    }
+</style>
+
+<footer class="site-footer" role="contentinfo" aria-label="Pie de página de Letras Inclusivas">
+    <div class="footer-container">
+        <div class="footer-grid">
+            
+            <!-- Columna 1: Sobre el Proyecto -->
+            <div class="footer-col">
+                <h4>Letras Inclusivas</h4>
+                <ul class="footer-links">
+                    <li><a href="/">Inicio</a></li>
+                    <li><a href="/">Biblioteca de Libros</a></li>
+                    <li><a href="/">Descargas BRF y PDF</a></li>
+                </ul>
+            </div>
+
+            <!-- Columna 2: Herramientas -->
+            <div class="footer-col">
+                <h4>Herramientas</h4>
+                <ul class="footer-links">
+                    <li><a href="/traducir-archivo">Traducir PDF a Braille</a></li>
+                    <li><a href="/braille-a-texto">Traductor Braille a Texto</a></li>
+                    <li><a href="/traducir-archivo">Formatos Digitales Accesibles</a></li>
+                </ul>
+            </div>
+
+            <!-- Columna 3: Explorar -->
+            <div class="footer-col">
+                <h4>Explorar</h4>
+                <ul class="footer-links">
+                    <li>
+                        <form action="{{ url_for('buscar_categoria') }}" method="POST" style="margin: 0;">
+                            <input type="hidden" name="query" value="Horror, terror, miedo">
+                            <button type="submit" class="footer-category-btn">Libros de Terror y Misterio</button>
+                        </form>
+                    </li>
+                    <li>
+                        <form action="{{ url_for('buscar_categoria') }}" method="POST" style="margin: 0;">
+                            <input type="hidden" name="query" value="Clásicos, Literatura clásica ">
+                            <button type="submit" class="footer-category-btn">Clásicos Universales</button>
+                        </form>
+                    </li>
+                    <li>
+                        <form action="{{ url_for('buscar_categoria') }}" method="POST" style="margin: 0;">
+                            <input type="hidden" name="query" value="Ciencias, matemáticas, algebra, física">
+                            <button type="submit" class="footer-category-btn">Ciencias y Matemáticas</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Columna 4: Cuenta -->
+            <div class="footer-col">
+                <h4>Cuenta</h4>
+                <ul class="footer-links">
+                    {% if current_user.is_authenticated %}
+                    <li><a href="/perfil">Mi Perfil</a></li>
+                    <li><a href="/perfil">Mis Listas</a></li>
+                    <li><a href="/logout">Cerrar Sesión</a></li>
+                    {% else %}
+                    <li><a href="/login">Iniciar Sesión</a></li>
+                    <li><a href="/registro">Crear Cuenta</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- Barra Inferior -->
+        <div class="footer-bottom">
+            <div class="footer-copyright">
+                © 2026 Letras Inclusivas
+            </div>
+
+            <div class="footer-actions">
+                <button type="button" id="footer-scroll-top" class="scroll-top-btn" title="Volver al inicio" aria-label="Volver arriba">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Script para retorno suave al inicio -->
+<script>
+(function() {
+    const scrollBtn = document.getElementById('footer-scroll-top');
+    if (scrollBtn) {
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+})();
+</script>
