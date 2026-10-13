@@ -1,7 +1,6 @@
 # Contains dictionaries that map English letters to braille.
 
 letters = {   
-          
            'ñ': chr(10299),
            'á': chr(10295), 
            'é': chr(10286),
@@ -58,7 +57,8 @@ punctuation = {',': chr(10242),
                '―': chr(10276),
                '[': chr(10294),
                ']': chr(10296),
-               '-': chr(10276)}
+               '-': chr(10276),
+               '+': chr(10262)}
 
 numbers = {'1': chr(10241),
            '2': chr(10243),

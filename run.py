@@ -7,8 +7,11 @@ import uuid
 import requests
 from typing import Dict, Optional
 
+from dotenv import load_dotenv
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 os.chdir(PROJECT_ROOT)
+load_dotenv(PROJECT_ROOT / ".env")
 PACKAGE_DIR = PROJECT_ROOT / "app"
 
 spec_pkg = importlib.util.spec_from_file_location("app", PACKAGE_DIR / "__init__.py")
@@ -27,14 +30,18 @@ pdfDown_mod = importlib.util.module_from_spec(spec_pdfdown)
 sys.modules["app.pdfDown"] = pdfDown_mod
 spec_pdfdown.loader.exec_module(pdfDown_mod)
 PDF = pdfDown_mod.PDF
+
+spec_ocr = importlib.util.spec_from_file_location("app.ocr_mistral", PACKAGE_DIR / "ocr_mistral.py")
+ocr_mistral = importlib.util.module_from_spec(spec_ocr)
+sys.modules["app.ocr_mistral"] = ocr_mistral
+spec_ocr.loader.exec_module(ocr_mistral)
+
 TEMP_FILES_DIR = str(PROJECT_ROOT / "temp_files")
 os.makedirs(TEMP_FILES_DIR, exist_ok=True)
 
 from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from pdf2image import convert_from_path
-import LetrasInclusivas as lt
 
 def buscar_libros(query: str, max_results: int = 10) -> Optional[Dict]:
     """
@@ -418,11 +425,16 @@ def upload_pdf():
     file_path = os.path.join(TEMP_FILES_DIR, 'temp_pdf.pdf')
     pdf_file.save(file_path)
 
-    # Contar líneas de texto y procesarlas
-    lines = lt.count_text_lines(file_path)
-    texto = "\n".join(lines)
+    # Extraer texto con Mistral OCR y traducir a Braille
+    try:
+        lines = ocr_mistral.extract_text_from_pdf(file_path)
+    except ocr_mistral.MistralOCRError as exc:
+        return str(exc), 502
+    except Exception as exc:
+        return f"Error inesperado al procesar el PDF: {exc}", 500
 
-    # Convertir a Braille
+    texto = "\n".join(lines)
+    texto = ocr_mistral.clean_and_refine_for_braille(texto, use_ai=True)
     braille = mn.user_text(texto)
 
     # Guardar el texto Braille temporalmente para descargarlo luego
@@ -567,44 +579,83 @@ def descargar_libro():
 def parse_braille_tables(text):
     tables = []
     
-    # Buscar bloques entre [Inicio De Tabla] y [Fin De Tabla], cruzando saltos de línea
-    pattern = r'\[\s*INICIO\s+DE\s+TABLA\s*\](.*?)\[\s*FIN\s+DE\s+TABLA\s*\]'
+    # Buscar bloques entre [Inicio De Tabla ...] y [Fin De Tabla], tolerando mayúsculas/minúsculas y saltos de línea
+    pattern = r'\[\s*INICIO\s+DE\s+TABLA(?:\s*:\s*\d+\s+columnas)?\s*\](.*?)\[\s*FIN\s+DE\s+TABLA\s*\]'
     
     for table_match in re.finditer(pattern, text, flags=re.IGNORECASE | re.DOTALL):
-        table_text = table_match.group(1)
+        table_text = table_match.group(1).strip()
         
-        # Buscar "Fila X, Columna Y:" tolerando espacios y saltos de línea
+        # 1. Detectar el formato nuevo estructurado: "Fila X:" seguido de "- Encabezado: Valor"
+        row_split_pattern = r'(?:^|\s)Fila\s+(\d+)\s*:'
+        row_matches = list(re.finditer(row_split_pattern, table_text, flags=re.IGNORECASE))
+        
+        if row_matches:
+            headers = []
+            parsed_rows = []
+            
+            for i, r_match in enumerate(row_matches):
+                start_row = r_match.end()
+                end_row = row_matches[i+1].start() if i + 1 < len(row_matches) else len(table_text)
+                row_content = table_text[start_row:end_row].strip()
+                
+                # Extraer pares "- Encabezado: Valor" tolerando guiones internos en valores como "1.5 - 2 min"
+                item_pattern = r'-\s*([^-:\n]+?)\s*:\s*(.*?)(?=(?:\s+-\s+[^-:\n]+?\s*:|$))'
+                row_dict = {}
+                for item_match in re.finditer(item_pattern, row_content, flags=re.DOTALL):
+                    h_name = " ".join(item_match.group(1).split())
+                    val = " ".join(item_match.group(2).split())
+                    if val.lower() in ("(vacio)", "(vacío)"):
+                        val = ""
+                    if h_name not in headers:
+                        headers.append(h_name)
+                    row_dict[h_name] = val
+                parsed_rows.append(row_dict)
+            
+            if headers:
+                matrix = [headers]
+                for row_dict in parsed_rows:
+                    row_data = [row_dict.get(h, '') for h in headers]
+                    matrix.append(row_data)
+                tables.append(matrix)
+                continue
+
+        # 2. Formato heredado: "Fila X, Columna Y: ..."
         cell_pattern = r'Fila\s+(\d+)\s*,\s*Columna\s+(\d+)\s*:'
         matches = list(re.finditer(cell_pattern, table_text, flags=re.IGNORECASE))
         
-        if not matches:
-            continue
-            
-        current_table = {}
-        for i, match in enumerate(matches):
-            r = int(match.group(1))
-            c = int(match.group(2))
-            
-            start_val = match.end()
-            if i + 1 < len(matches):
-                end_val = matches[i+1].start()
-            else:
-                end_val = len(table_text)
+        if matches:
+            current_table = {}
+            for i, match in enumerate(matches):
+                r = int(match.group(1))
+                c = int(match.group(2))
                 
-            val = table_text[start_val:end_val]
-            val = " ".join(val.split())
-            current_table[(r, c)] = val
+                start_val = match.end()
+                if i + 1 < len(matches):
+                    end_val = matches[i+1].start()
+                else:
+                    end_val = len(table_text)
+                    
+                val = table_text[start_val:end_val]
+                val = " ".join(val.split())
+                current_table[(r, c)] = val
+                
+            max_row = max((k[0] for k in current_table.keys()), default=0)
+            max_col = max((k[1] for k in current_table.keys()), default=0)
             
-        max_row = max((k[0] for k in current_table.keys()), default=0)
-        max_col = max((k[1] for k in current_table.keys()), default=0)
-        
-        if max_row > 0 and max_col > 0:
-            matrix = []
-            for r_idx in range(1, max_row + 1):
-                row_data = []
-                for c_idx in range(1, max_col + 1):
-                    row_data.append(current_table.get((r_idx, c_idx), ''))
-                matrix.append(row_data)
+            if max_row > 0 and max_col > 0:
+                matrix = []
+                for r_idx in range(1, max_row + 1):
+                    row_data = []
+                    for c_idx in range(1, max_col + 1):
+                        row_data.append(current_table.get((r_idx, c_idx), ''))
+                    matrix.append(row_data)
+                tables.append(matrix)
+            continue
+
+        # 3. Caso especial: tabla degenerada de una sola fila de encabezados ("- Columna X: ...")
+        col_items = list(re.finditer(r'-\s*(?:Columna\s+\d+|[^:\n\r]+?)\s*:\s*([^\n\r]+)', table_text))
+        if col_items:
+            matrix = [[m.group(1).strip() for m in col_items]]
             tables.append(matrix)
             
     return tables

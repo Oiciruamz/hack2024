@@ -407,17 +407,37 @@ def _format_table_accessible(table_cells):
         table_cells: lista de filas, cada fila es lista de strings.
 
     Returns:
-        Lista de líneas con el formato accesible:
-            [INICIO DE TABLA]
-            Fila 1, Columna 1: ...
+        Lista de líneas con el formato accesible organizado por encabezados:
+            [INICIO DE TABLA: N columnas]
+            Fila 1:
+            - Encabezado 1: Valor 1
             [FIN DE TABLA]
     """
-    lines = ["[INICIO DE TABLA]"]
-    for row_idx, row in enumerate(table_cells, start=1):
-        for col_idx, cell_text in enumerate(row, start=1):
-            # Limpiar espacios extra / saltos internos de la celda
-            clean = " ".join(cell_text.split()) if cell_text else ""
-            lines.append(f"Fila {row_idx}, Columna {col_idx}: {clean}")
+    if not table_cells:
+        return []
+
+    raw_headers = table_cells[0]
+    headers = [
+        " ".join(h.split()) if h.strip() else f"Columna {idx}"
+        for idx, h in enumerate(raw_headers, start=1)
+    ]
+    num_cols = len(headers)
+
+    lines = [f"[INICIO DE TABLA: {num_cols} columnas]"]
+
+    if len(table_cells) == 1:
+        for idx, h in enumerate(headers, start=1):
+            lines.append(f"- Columna {idx}: {h}")
+        lines.append("[FIN DE TABLA]")
+        return lines
+
+    for row_idx, row in enumerate(table_cells[1:], start=1):
+        lines.append(f"Fila {row_idx}:")
+        for col_idx, header in enumerate(headers):
+            val = row[col_idx].strip() if col_idx < len(row) and row[col_idx] else ""
+            clean_val = " ".join(val.split()) if val else "(vacio)"
+            lines.append(f"- {header}: {clean_val}")
+
     lines.append("[FIN DE TABLA]")
     return lines
 

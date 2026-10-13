@@ -88,6 +88,10 @@ def char_to_braille(char):
         return char
     elif char == "\n":
         return "\n"
+    elif char in ("\u200b", "\ufeff", "\u00ad", "\r"):
+        return ""
+    elif char == "\u00a0":
+        return " "
     elif char in mapAlphaToBraille.letters and char.isupper():
         return CAPITAL + mapAlphaToBraille.letters.get(char)
     elif char in mapAlphaToBraille.letters:
