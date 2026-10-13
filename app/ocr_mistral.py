@@ -10,10 +10,13 @@ import base64
 import os
 import re
 import time
-from typing import List
+from typing import Any, Dict, List
+import requests
 
-# pyrefly: ignore [missing-import]
-from mistralai.client import Mistral
+try:
+    from mistralai.client import Mistral
+except Exception:
+    Mistral = None
 
 # Alias oficial que apunta al último modelo OCR de Mistral
 OCR_MODEL = "mistral-ocr-latest"
@@ -150,10 +153,15 @@ def markdown_to_lines(markdown: str) -> List[str]:
 
 def _page_to_lines(page) -> List[str]:
     """Une markdown de página + tablas extraídas (si vienen aparte)."""
-    md = getattr(page, "markdown", None) or ""
+    if isinstance(page, dict):
+        md = page.get("markdown") or ""
+        tables = page.get("tables") or []
+    else:
+        md = getattr(page, "markdown", None) or ""
+        tables = getattr(page, "tables", None) or []
+
     lines = markdown_to_lines(md)
 
-    tables = getattr(page, "tables", None) or []
     for table in tables:
         content = None
         if isinstance(table, dict):
@@ -188,20 +196,41 @@ def extract_text_from_pdf(pdf_path: str) -> List[str]:
     api_key = _require_api_key()
     document_url = _pdf_to_data_url(pdf_path)
 
+    url = "https://api.mistral.ai/v1/ocr"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    payload = {
+        "model": OCR_MODEL,
+        "document": {
+            "type": "document_url",
+            "document_url": document_url,
+        },
+    }
+
     last_error: Exception | None = None
-    response = None
+    pages: List[Any] = []
 
     for attempt in range(_MAX_RETRIES):
         try:
-            # Patrón oficial: https://docs.mistral.ai/capabilities/document_ai/basic_ocr
-            with Mistral(api_key=api_key) as client:
-                response = client.ocr.process(
-                    model=OCR_MODEL,
-                    document={
-                        "type": "document_url",
-                        "document_url": document_url,
-                    },
+            resp = requests.post(url, json=payload, headers=headers, timeout=120)
+            if resp.status_code == 429:
+                if attempt < _MAX_RETRIES - 1:
+                    time.sleep(_RETRY_BASE_SECONDS * (attempt + 1))
+                    continue
+                raise MistralOCRError(
+                    "Rate limit excedido (429) en Mistral OCR. Intenta nuevamente en unos segundos."
                 )
+
+            if resp.status_code != 200:
+                raise MistralOCRError(
+                    f"Mistral OCR error HTTP {resp.status_code}: {resp.text}"
+                )
+
+            data = resp.json()
+            pages = data.get("pages") or []
             break
         except MistralOCRError:
             raise
@@ -216,11 +245,9 @@ def extract_text_from_pdf(pdf_path: str) -> List[str]:
                 continue
             raise MistralOCRError(f"Error al llamar a Mistral OCR: {exc}") from exc
 
-    if response is None:
-        raise MistralOCRError(f"Error al llamar a Mistral OCR: {last_error}")
-
-    pages = getattr(response, "pages", None) or []
     if not pages:
+        if last_error:
+            raise MistralOCRError(f"Error al llamar a Mistral OCR: {last_error}")
         raise MistralOCRError("Mistral OCR no devolvió páginas de texto.")
 
     all_lines: List[str] = []
@@ -310,20 +337,30 @@ def refine_text_with_ai(text: str) -> str:
     )
 
     try:
-        with Mistral(api_key=api_key) as client:
-            chat_response = client.chat.complete(
-                model="mistral-small-latest",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": text},
-                ],
-                temperature=0.1,
-            )
-            refined = chat_response.choices[0].message.content
-            if refined and refined.strip():
-                clean_refined = re.sub(r"^```[a-zA-Z]*\n?", "", refined.strip())
-                clean_refined = re.sub(r"\n?```$", "", clean_refined)
-                return clean_refined.strip()
+        url = "https://api.mistral.ai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        payload = {
+            "model": "mistral-small-latest",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text},
+            ],
+            "temperature": 0.1,
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=60)
+        if resp.status_code == 200:
+            data = resp.json()
+            choices = data.get("choices") or []
+            if choices:
+                refined = choices[0].get("message", {}).get("content", "")
+                if refined and refined.strip():
+                    clean_refined = re.sub(r"^```[a-zA-Z]*\n?", "", refined.strip())
+                    clean_refined = re.sub(r"\n?```$", "", clean_refined)
+                    return clean_refined.strip()
     except Exception as exc:
         print(f"[Aviso Refinamiento IA] No se pudo conectar con Mistral Chat: {exc}. Usando sanitización local.")
 
