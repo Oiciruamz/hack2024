@@ -18,18 +18,20 @@
             font-size: 14px;
         }
 
-        .link-login:hover {
+        .link-login:hover 
+        {
             color: #5533ff; /* Cambia a un color diferente al hacer hover */
             text-decoration: underline; /* Añade un subrayado opcional */
         }
 
-        .btn-secondary{
+        .btn-secondary
+        {
             width: 295px; 
             height: 50px; 
             border-radius: 5px;
             border-color: #613794;
             font-family: Poppins, sans-serif;
-            background-color: #653F95;;
+            background-color: #653F95;
         }
 
         .btn-secondary:hover
@@ -51,18 +53,24 @@
 
     <h1 class="mt-5 mb-4" style="font-family: Poltawski Nowy, serif; font-weight: 500;">Letras Inclusivas</h1>
 
-    <main class="d-flex flex-column align-items-center border rounded-3 shadow border-secondary-subtle" style="width: 400px; height: 425px; background-color: #FFFFFF">
+    <main class="d-flex flex-column align-items-center justify-content-center border rounded-3 shadow border-secondary-subtle" style="width: 380px; height: 400px; background-color: #FFFFFF">
 
-        <h4 class="mt-5 mb-5" style=" font-family: Poppins, sans-serif; font-size:larger; font-weight: 500; font-style: normal;">Inicia sesión con tu cuenta</h4>
+        <h4 class="mb-4" style="font-family: Poppins, sans-serif; font-size:larger; font-weight: 500; font-style: normal;">Inicia sesión con tu cuenta</h4>
+
+        {% if error %}
+        <div class="alert alert-danger text-center py-2 px-3 mb-3" role="alert" id="error-message" style="font-family: Poppins, sans-serif; font-size: 14px; width: 295px;">
+            {{ error }}
+        </div>
+        {% endif %}
 
         <form method="POST" action="{{ url_for('login') }}" class="d-flex flex-column align-items-center">
-            <div class="d-flex flex-column align-items-center justify-content-between mb-5" style="height: 120px;">
-                <input type="email" name="email" class="form-control" style="font-family: Poppins, sans-serif; font-size: 14px; font-weight:300; width: 295px; height: 50px;" placeholder="Correo electrónico*" aria-label="email" aria-describedby="basic-addon1" required>
+            <div class="d-flex flex-column align-items-center justify-content-between mb-4" style="height: 120px;">
+                <input type="email" id="email" name="email" class="form-control" style="font-family: Poppins, sans-serif; font-size: 14px; font-weight:300; width: 295px; height: 50px;" placeholder="Correo electrónico*" aria-label="Correo electrónico" required>
 
                 <input type="password" name="password" class="form-control" style="font-family: Poppins, sans-serif; font-size: 14px; font-weight:300; width: 295px; height: 50px;" placeholder="Contraseña*" aria-label="password" aria-describedby="basic-addon1" required>
             </div>
 
-            <section class="d-flex flex-column" style="height: 100px;">
+            <section class="d-flex flex-column" style="width: 295px;">
                 <a href="{{ url_for('registro') }}" class="link-login mb-2">¿No tienes cuenta? Regístrate aquí</a>
                 <button type="submit" class="btn btn-secondary">Iniciar sesión</button>
             </section>

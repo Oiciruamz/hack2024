@@ -113,41 +113,88 @@
 
     {% include 'header.html' %}
 
-    <div class="container" id="form-content">
+    <main class="container" id="form-content">
         <h1>Traducir archivo PDF a código Braille</h1>
         <p>Ingresa el archivo que deseas traducir</p>
 
-        <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data"">
-            <input style="display: none;" id="subir" class="upload-btn" type="file" name="pdf_file" accept="application/pdf" required>
-            <label for="subir" class="upload-btn">Selecciona el archivo</label>
+        <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+            <input style="display: none;" id="subir" class="upload-btn" type="file" name="pdf_file" accept=".pdf,application/pdf" required aria-label="Seleccionar archivo PDF para traducir">
+            <label for="subir" class="upload-btn" tabindex="0" role="button" aria-label="Selecciona el archivo PDF desde tu dispositivo">Selecciona el archivo</label>
         </form>
 
-        <div class="dropzone">
+        <div class="dropzone" id="dropzone" tabindex="0" role="region" aria-label="Zona para arrastrar y soltar archivo PDF">
             ó arrastra tu archivo aquí
         </div>
-    </div>
+        <div id="file-error" class="text-danger mt-3" style="display:none; font-weight: 500;" role="alert"></div>
+    </main>
 
-    <div id="loading-spinner">
-        <div class="loader"></div>
+    <div id="loading-spinner" role="status" aria-live="polite">
+        <div class="loader" aria-hidden="true"></div>
         <h2>Traduciendo el archivo, por favor espera...</h2>
     </div>
 
     <script>
-        // Obtener el input de archivo y el formulario
         const fileInput = document.getElementById('subir');
         const form = document.getElementById('upload-form');
         const formContent = document.getElementById('form-content');
         const loadingSpinner = document.getElementById('loading-spinner');
+        const dropzone = document.getElementById('dropzone');
+        const fileError = document.getElementById('file-error');
+        const fileLabel = document.querySelector('label[for="subir"]');
 
-        // Agregar un evento para detectar cuando se selecciona un archivo
-        fileInput.addEventListener('change', function() {
-            // Si se ha seleccionado un archivo, enviar el formulario automáticamente
-            if (fileInput.files.length > 0) {
-                formContent.style.display = 'none';
-                loadingSpinner.style.display = 'flex';
-                form.submit();
+        function procesarArchivo(file) {
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                fileError.textContent = 'Formato no permitido: solo se aceptan archivos PDF.';
+                fileError.style.display = 'block';
+                return;
             }
-        }); 
+            fileError.style.display = 'none';
+            formContent.style.display = 'none';
+            loadingSpinner.style.display = 'flex';
+            form.submit();
+        }
+
+        // Evento de selección de archivo normal
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                procesarArchivo(fileInput.files[0]);
+            }
+        });
+
+        // Soporte de accesibilidad por teclado para el label
+        fileLabel.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+
+        // Drag & Drop
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.style.backgroundColor = '#EDE7F6';
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.style.backgroundColor = '';
+            });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                procesarArchivo(files[0]);
+            }
+        });
     </script>
 
     {% include 'footer.html' %}

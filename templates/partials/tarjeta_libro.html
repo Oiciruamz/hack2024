@@ -1,0 +1,38 @@
+{# Tarjeta de libro compartida por inicio.html y resultados.html.
+   Espera un libro con el formato {id, titulo, autor, imagen, color}.
+   Importar con:  {% import 'partials/tarjeta_libro.html' as tl with context %} #}
+{% macro tarjeta_libro(libro) %}
+<div class="tarjeta">
+    <div class="color-tarjeta" data-color="{{ libro.color }}">
+        <img src="{{ libro.imagen if libro.imagen.startswith('http') else url_for('static', filename='images/' + libro.imagen) }}"
+            alt="{{ libro.titulo }}" class="portada-libro" loading="lazy">
+    </div>
+
+    <div class="tarjeta-info">
+        <h5 class="titulo-libro" title="{{ libro.titulo }}">{{ libro.titulo }}</h5>
+        <h6 class="autor-libro" title="{{ libro.autor }}">{{ libro.autor }}</h6>
+
+        <div class="acciones-tarjeta">
+
+            <a href="{{ url_for('descargar_libro', titulo=libro.titulo) }}" class="boton-tarjeta"
+                style="border-color: #653F95; background-color: #653F95; color: white; text-decoration: none; cursor: pointer;">
+                <p style="font-size: 12px; margin: 0px;">Descargar</p>
+            </a>
+
+            {% if current_user.is_authenticated %}
+            <button class="boton-tarjeta guardar-btn" data-libro-id="{{ libro.id }}"
+                data-titulo="{{ libro.titulo }}" data-autor="{{ libro.autor }}" data-imagen="{{ libro.imagen }}"
+                style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600; cursor: pointer;">
+                <p style="font-size: 12px; margin: 0px;">Guardar</p>
+            </button>
+            {% else %}
+            <a href="/login" class="boton-tarjeta"
+                style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600; text-decoration: none; cursor: pointer;">
+                <p style="font-size: 12px; margin: 0px;">Guardar</p>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endmacro %}

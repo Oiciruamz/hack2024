@@ -43,7 +43,100 @@ from flask import Flask, render_template, request, send_file, redirect, url_for,
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
-def buscar_libros(query: str, max_results: int = 10) -> Optional[Dict]:
+GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes"
+GOOGLE_BOOKS_KEY = os.getenv('GOOGLE_BOOKS_API_KEY', 'AIzaSyAAUx82Bb6dJvUpJ2dZnWSNsejemaXhOY8')
+GOOGLE_BOOKS_PAGINA = 40      # Máximo permitido por la API por petición
+GOOGLE_BOOKS_MAX_PAGINAS = 3  # Tope de peticiones por búsqueda
+
+# Géneros del dropdown "Catálogo". La clave es lo que envía el formulario y
+# 'q' la consulta real a Google Books. Patrón validado contra la API:
+# 'subject:<tema en inglés> <término en español>' ('categories:' no existe y
+# 'subject:' en español devuelve 0 resultados). Agregar un género = 1 línea.
+GENEROS_CATALOGO = {
+    'terror':   {'nombre': 'Terror',                 'q': 'subject:fiction terror'},
+    'clasicos': {'nombre': 'Clásicos',               'q': 'subject:fiction clásicos'},
+    'ciencias': {'nombre': 'Ciencias y matemáticas', 'q': 'subject:mathematics matemáticas'},
+}
+
+# Registro en memoria de libros de Google Books mostrados/guardados,
+# indexado por ID con prefijo 'gb_' para no chocar con el catálogo local.
+libros_externos: Dict[str, Dict] = {}
+
+
+def _a_https(url: str) -> str:
+    """Evita contenido mixto: Google a veces devuelve portadas con http://."""
+    if url and url.startswith('http://'):
+        return 'https://' + url[len('http://'):]
+    return url
+
+
+def _consultar_google_books(q: str, lang: Optional[str] = None, objetivo: int = 20) -> list:
+    """
+    Consulta Google Books paginando con startIndex hasta reunir `objetivo`
+    libros que tengan portada, título y autores (sin duplicados).
+
+    Lanza requests.RequestException si falla la primera página; si falla una
+    página posterior, devuelve lo reunido hasta ese momento.
+    """
+    vistos = set()
+    resultados = []
+
+    for pagina in range(GOOGLE_BOOKS_MAX_PAGINAS):
+        params = {
+            'q': q,
+            'key': GOOGLE_BOOKS_KEY,
+            'maxResults': GOOGLE_BOOKS_PAGINA,
+            'startIndex': pagina * GOOGLE_BOOKS_PAGINA,
+            'orderBy': 'relevance',
+            'printType': 'books',
+            'fields': 'items(id,volumeInfo(title,authors,description,imageLinks,categories,publishedDate))',
+        }
+        if lang:
+            params['langRestrict'] = lang
+
+        try:
+            response = requests.get(GOOGLE_BOOKS_URL, params=params, timeout=10)
+            response.raise_for_status()
+            items = response.json().get('items', [])
+        except requests.exceptions.RequestException:
+            if pagina == 0:
+                raise
+            break
+
+        if not items:
+            break
+
+        for libro in items:
+            volume_id = libro.get('id')
+            volumeInfo = libro.get('volumeInfo', {})
+            thumbnail = volumeInfo.get('imageLinks', {}).get('thumbnail')
+            if not (volume_id and thumbnail and volumeInfo.get('title') and volumeInfo.get('authors')):
+                continue
+            if volume_id in vistos:
+                continue
+            vistos.add(volume_id)
+
+            resultados.append({
+                'id': volume_id,
+                'volumeInfo': {
+                    'title': volumeInfo['title'],
+                    'authors': volumeInfo['authors'],
+                    'description': volumeInfo.get('description', 'Descripción no disponible'),
+                    'imageLinks': {'thumbnail': _a_https(thumbnail)},
+                    'categories': volumeInfo.get('categories', []),
+                    'publishedDate': volumeInfo.get('publishedDate', ''),
+                }
+            })
+            if len(resultados) >= objetivo:
+                return resultados
+
+        if len(items) < GOOGLE_BOOKS_PAGINA:
+            break  # No hay más páginas
+
+    return resultados
+
+
+def buscar_libros(query: str, max_results: int = 20) -> Optional[Dict]:
     """
     Busca libros en Google Books API y devuelve solo los que tienen imágenes.
     
@@ -57,61 +150,16 @@ def buscar_libros(query: str, max_results: int = 10) -> Optional[Dict]:
     try:
         if not query:
             raise ValueError("Query es obligatorio")
-            
-        base_url = "https://www.googleapis.com/books/v1/volumes"
-        
-        # Solicitamos más resultados de los necesarios para tener margen
-        # para filtrar los que no tienen imágenes
-        params = {
-            'q': query,
-            'key': 'AIzaSyAAUx82Bb6dJvUpJ2dZnWSNsejemaXhOY8',
-            'maxResults': min(40, max_results * 2),  # Pedimos el doble, máximo 40
-            'fields': 'items(volumeInfo(title,authors,description,imageLinks,categories,publishedDate))',  # Optimiza la respuesta
-        }
-        
-        response = requests.get(base_url, params=params)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        if 'items' not in data:
-            print("No se encontraron libros")
-            return None
-        
-        # Filtrar solo libros con imágenes
-        libros_con_imagenes = []
-        for libro in data['items']:
-            volumeInfo = libro.get('volumeInfo', {})
-            if (volumeInfo.get('imageLinks', {}).get('thumbnail') and 
-                volumeInfo.get('title') and  # Aseguramos que tenga título
-                volumeInfo.get('authors')):   # Aseguramos que tenga autores
-                
-                # Limpiamos y estructuramos los datos
-                libro_procesado = {
-                    'volumeInfo': {
-                        'title': volumeInfo['title'],
-                        'authors': volumeInfo['authors'],
-                        'description': volumeInfo.get('description', 'Descripción no disponible'),
-                        'imageLinks': {
-                            'thumbnail': volumeInfo['imageLinks']['thumbnail']
-                        },
-                        'categories': volumeInfo.get('categories', []),
-                        'publishedDate': volumeInfo.get('publishedDate', '')
-                    }
-                }
-                libros_con_imagenes.append(libro_procesado)
-                
-                # Si ya tenemos suficientes libros con imágenes, paramos
-                if len(libros_con_imagenes) >= max_results:
-                    break
-        
+
+        libros_con_imagenes = _consultar_google_books(query, objetivo=max_results)
+
         if not libros_con_imagenes:
             print("No se encontraron libros con imágenes")
             return None
-            
+
         # Devolvemos en el mismo formato que la API original
         return {'items': libros_con_imagenes}
-        
+
     except requests.exceptions.RequestException as e:
         print(f"Error en la petición HTTP: {e}")
         return None
@@ -121,70 +169,30 @@ def buscar_libros(query: str, max_results: int = 10) -> Optional[Dict]:
     except Exception as e:
         print(f"Error inesperado: {e}")
         return None
-    
 
-def buscar_libros_categoria(categoria, max_results: int = 10) -> Optional[Dict]:
-        
+
+def buscar_libros_categoria(categoria, max_results: int = 20) -> Optional[Dict]:
+    """
+    Busca libros de un género del catálogo. `categoria` puede ser una clave de
+    GENEROS_CATALOGO (p. ej. 'terror') o texto libre como respaldo.
+    """
     try:
         if not categoria:
             raise ValueError("Query es obligatorio")
-            
-        base_url = "https://www.googleapis.com/books/v1/volumes"
-        
-        # Solicitamos más resultados de los necesarios para tener margen
-        # para filtrar los que no tienen imágenes
-        params = {
-            'q': f'categories:{categoria}',
-            'orderBy': 'relevance',
-            'key': 'AIzaSyAAUx82Bb6dJvUpJ2dZnWSNsejemaXhOY8',
-            'maxResults': min(40, max_results * 2),  
-            'langRestrict': 'es',
-            'fields': 'items(volumeInfo(title,authors,description,imageLinks,categories,publishedDate))',  # Optimiza la respuesta
-        }
 
-        response = requests.get(base_url, params=params)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        if 'items' not in data:
-            print("No se encontraron libros")
-            return None
-        
-        # Filtrar solo libros con imágenes
-        libros_con_imagenes = []
-        for libro in data['items']:
-            volumeInfo = libro.get('volumeInfo', {})
-            if (volumeInfo.get('imageLinks', {}).get('thumbnail') and 
-                volumeInfo.get('title') and  # Aseguramos que tenga título
-                volumeInfo.get('authors')):   # Aseguramos que tenga autores
-                
-                # Limpiamos y estructuramos los datos
-                libro_procesado = {
-                    'volumeInfo': {
-                        'title': volumeInfo['title'],
-                        'authors': volumeInfo['authors'],
-                        'description': volumeInfo.get('description', 'Descripción no disponible'),
-                        'imageLinks': {
-                            'thumbnail': volumeInfo['imageLinks']['thumbnail']
-                        },
-                        'categories': volumeInfo.get('categories', []),
-                        'publishedDate': volumeInfo.get('publishedDate', '')
-                    }
-                }
-                libros_con_imagenes.append(libro_procesado)
-                
-                # Si ya tenemos suficientes libros con imágenes, paramos
-                if len(libros_con_imagenes) >= max_results:
-                    break
-        
+        clave = str(categoria).strip().lower()
+        genero = GENEROS_CATALOGO.get(clave)
+        consulta = genero['q'] if genero else str(categoria).strip()
+
+        libros_con_imagenes = _consultar_google_books(consulta, lang='es', objetivo=max_results)
+
         if not libros_con_imagenes:
             print("No se encontraron libros con imágenes")
             return None
-            
+
         # Devolvemos en el mismo formato que la API original
         return {'items': libros_con_imagenes}
-    
+
     except requests.exceptions.RequestException as e:
         print(f"Error en la petición HTTP: {e}")
         return None
@@ -194,6 +202,35 @@ def buscar_libros_categoria(categoria, max_results: int = 10) -> Optional[Dict]:
     except Exception as e:
         print(f"Error inesperado: {e}")
         return None
+
+
+def normalizar_libro_google(item: Dict) -> Dict:
+    """
+    Convierte un resultado de Google Books al mismo formato que el catálogo
+    local ({id, titulo, autor, imagen, color}) y lo registra en libros_externos.
+    """
+    volumeInfo = item.get('volumeInfo', {})
+    libro = {
+        'id': f"gb_{item['id']}",
+        'titulo': volumeInfo.get('title', 'Sin título'),
+        'autor': ', '.join(volumeInfo.get('authors', [])),
+        'imagen': volumeInfo.get('imageLinks', {}).get('thumbnail', ''),
+    }
+    libros_externos[libro['id']] = dict(libro)
+    libro['color'] = generar_color_pastel()
+    return libro
+
+
+def obtener_libro(libro_id) -> Optional[Dict]:
+    """Resuelve un ID guardado en una lista: local (entero) o Google ('gb_...')."""
+    sid = str(libro_id).strip()
+    if sid.startswith('gb_'):
+        return libros_externos.get(sid)
+    try:
+        lid = int(sid)
+    except (ValueError, TypeError):
+        return None
+    return next((libro for libro in libros if libro['id'] == lid), None)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'jeje_lol'  # Cambia esto por una clave secreta real
@@ -201,6 +238,12 @@ app.config['SECRET_KEY'] = 'jeje_lol'  # Cambia esto por una clave secreta real
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+
+@app.context_processor
+def inyectar_generos_catalogo():
+    """Disponibiliza los géneros del dropdown "Catálogo" en todas las plantillas."""
+    return {'generos_catalogo': GENEROS_CATALOGO}
 
 class User(UserMixin):
     def __init__(self, id, email, password_hash):
@@ -216,43 +259,32 @@ users = {
 
 
 libros = [
-            {
-                "id": 1,
-                "imagen": "rebelion.webp",
-                "titulo": "Rebelión en la granja",
-                "autor": "George Orwell"
-            },
-            {
-                "id": 2,
-                "imagen": "1984.webp",
-                "titulo": "1984",
-                "autor": "George Orwell"
-            },
-            {
-                "id": 3,
-                "imagen": "guerra_mundos.jpg",
-                "titulo": "La guerra de los mundos",
-                "autor": "H.G Wells"
-            },
-            {
-                "id": 4,
-                "imagen": "carretera.jpg",
-                "titulo": "La carretera",
-                "autor": "Cormac McCarthy"
-            },
-            {
-                "id": 5,
-                "imagen": "metamorfosis.jpg",
-                "titulo": "La metamorfosis",
-                "autor": "Franz Kakfa"
-            },
-            {
-                "id": 6,
-                "imagen": "Frankie.jpg",
-                "titulo": "Frankenstein",
-                "autor": "Mary Shelley"
-            }
-        ]
+    {"id": 1, "imagen": "rebelion.webp", "titulo": "Rebelión en la granja", "autor": "George Orwell"},
+    {"id": 2, "imagen": "1984.webp", "titulo": "1984", "autor": "George Orwell"},
+    {"id": 3, "imagen": "guerra_mundos.jpg", "titulo": "La guerra de los mundos", "autor": "H.G Wells"},
+    {"id": 4, "imagen": "carretera.jpg", "titulo": "La carretera", "autor": "Cormac McCarthy"},
+    {"id": 5, "imagen": "metamorfosis.jpg", "titulo": "La metamorfosis", "autor": "Franz Kafka"},
+    {"id": 6, "imagen": "Frankie.jpg", "titulo": "Frankenstein", "autor": "Mary Shelley"},
+    {"id": 7, "imagen": "principito.jpg", "titulo": "El principito", "autor": "Antoine de Saint-Exupéry"},
+    {"id": 8, "imagen": "fahrenheit451.jpg", "titulo": "Fahrenheit 451", "autor": "Ray Bradbury"},
+    {"id": 9, "imagen": "mundo_feliz.jpg", "titulo": "Un mundo feliz", "autor": "Aldous Huxley"},
+    {"id": 10, "imagen": "cien_anos_soledad.jpg", "titulo": "Cien años de soledad", "autor": "Gabriel García Márquez"},
+    {"id": 11, "imagen": "quijote.jpg", "titulo": "Don Quijote de la Mancha", "autor": "Miguel de Cervantes"},
+    {"id": 12, "imagen": "dracula.jpg", "titulo": "Drácula", "autor": "Bram Stoker"},
+    {"id": 13, "imagen": "dorian_gray.jpg", "titulo": "El retrato de Dorian Gray", "autor": "Oscar Wilde"},
+    {"id": 14, "imagen": "crimen_castigo.jpg", "titulo": "Crimen y castigo", "autor": "Fiódor Dostoyevski"},
+    {"id": 15, "imagen": "cronica_muerte.jpg", "titulo": "Crónica de una muerte anunciada", "autor": "Gabriel García Márquez"},
+    {"id": 16, "imagen": "pedro_paramo.jpg", "titulo": "Pedro Páramo", "autor": "Juan Rulfo"},
+    {"id": 17, "imagen": "ensayo_ceguera.jpg", "titulo": "Ensayo sobre la ceguera", "autor": "José Saramago"},
+    {"id": 18, "imagen": "el_tunel.jpg", "titulo": "El túnel", "autor": "Ernesto Sabato"},
+    {"id": 19, "imagen": "ficciones.jpg", "titulo": "Ficciones", "autor": "Jorge Luis Borges"},
+    {"id": 20, "imagen": "el_aleph.jpg", "titulo": "El Aleph", "autor": "Jorge Luis Borges"},
+    {"id": 21, "imagen": "rayuela.jpg", "titulo": "Rayuela", "autor": "Julio Cortázar"},
+    {"id": 22, "imagen": "ciudad_perros.jpg", "titulo": "La ciudad y los perros", "autor": "Mario Vargas Llosa"},
+    {"id": 23, "imagen": "sombra_viento.jpg", "titulo": "La sombra del viento", "autor": "Carlos Ruiz Zafón"},
+    {"id": 24, "imagen": "miserables.jpg", "titulo": "Los miserables", "autor": "Víctor Hugo"},
+    {"id": 25, "imagen": "conde_montecristo.jpg", "titulo": "El conde de Montecristo", "autor": "Alejandro Dumas"}
+]
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -264,12 +296,14 @@ def load_user(user_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
         user = users.get(email)
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             return redirect(url_for('inicio'))
+        # SEG-001: Error login para contraseña incorrecta o usuario inexistente
+        return render_template('login.html', error='Error login'), 401
     return render_template('login.html')
 
 @app.route('/logout')
@@ -285,12 +319,20 @@ contador_listas = 1  # Contador para IDs de listas
 @app.route('/crear_lista', methods=['POST'])
 def crear_lista():
     global contador_listas
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({'success': False, 'message': 'Error validación', 'error': 'Error validación'}), 400
+
     nombre_lista = data.get('nombre')
+    # SEG-002: Rechazar cadenas vacías, solo espacios o NULL
+    if (
+        nombre_lista is None
+        or not str(nombre_lista).strip()
+        or str(nombre_lista).strip().upper() == 'NULL'
+    ):
+        return jsonify({'success': False, 'message': 'Error validación', 'error': 'Error validación'}), 400
 
-    if not nombre_lista:
-        return jsonify({'success': False, 'message': 'El nombre de la lista es requerido.'}), 400
-
+    nombre_lista = str(nombre_lista).strip()
     # Crear una nueva lista
     lista_id = contador_listas
     listas[lista_id] = {
@@ -304,13 +346,29 @@ def crear_lista():
 
 @app.route('/agregar_libro', methods=['POST'])
 def agregar_libro():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     libro_id = data.get('libro_id')  # Obtener el ID del libro
     lista_id = data.get('lista_id')  # Puede ser un string, convertirlo a entero
 
     # Verifica que el libro y la lista existan
     if not libro_id or not lista_id:
         return jsonify({'success': False, 'message': 'El libro ID y la lista ID son requeridos.'}), 400
+
+    libro_id = str(libro_id).strip()
+
+    # Libros de Google Books: registrarlos si aún no están en memoria
+    # (p. ej. si el servidor se reinició tras mostrar los resultados).
+    if libro_id.startswith('gb_') and libro_id not in libros_externos:
+        titulo = str(data.get('titulo') or '').strip()
+        imagen = str(data.get('imagen') or '').strip()
+        if not titulo or not imagen.startswith('http'):
+            return jsonify({'success': False, 'message': 'No se encontró la información del libro.'}), 404
+        libros_externos[libro_id] = {
+            'id': libro_id,
+            'titulo': titulo,
+            'autor': str(data.get('autor') or '').strip(),
+            'imagen': _a_https(imagen),
+        }
 
     try:
         lista_id = int(lista_id)
@@ -325,6 +383,46 @@ def agregar_libro():
 
     except ValueError:
         return jsonify({'success': False, 'message': 'El ID de la lista debe ser un número válido.'}), 400
+
+@app.route('/eliminar_libro', methods=['POST'])
+def eliminar_libro():
+    data = request.get_json(silent=True) or request.form or {}
+    libro_id = data.get('libro_id')
+    lista_id = data.get('lista_id')
+
+    if libro_id is None or lista_id is None:
+        return jsonify({'success': False, 'message': 'El libro ID y la lista ID son requeridos.'}), 400
+
+    try:
+        lista_id = int(lista_id)
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'El ID de la lista debe ser un número válido.'}), 400
+
+    if lista_id not in listas:
+        return jsonify({'success': False, 'message': f'La lista con ID {lista_id} no existe.'}), 404
+
+    str_libro_id = str(libro_id).strip()
+    libros_actuales = listas[lista_id].get('libros', [])
+
+    nuevos_libros = [x for x in libros_actuales if str(x).strip() != str_libro_id]
+
+    if len(nuevos_libros) == len(libros_actuales):
+        return jsonify({'success': False, 'message': 'El libro no se encuentra en la lista.'}), 404
+
+    listas[lista_id]['libros'] = nuevos_libros
+
+    # Sincronizar listas_con_libros global si está presente
+    global listas_con_libros
+    for l in listas_con_libros:
+        if l.get('id') == lista_id:
+            l['libros'] = [b for b in l.get('libros', []) if str(b.get('id', '')).strip() != str_libro_id]
+
+    return jsonify({
+        'success': True,
+        'message': 'Libro eliminado de la lista correctamente.',
+        'libros': listas[lista_id]['libros'],
+        'total_libros': len(nuevos_libros)
+    }), 200
 
 @app.route('/listas', methods=['GET'])
 def obtener_listas():
@@ -345,10 +443,10 @@ def perfil():
         libros_en_lista = []  # Inicializa una lista vacía para almacenar los libros
         
         # Iterar sobre los IDs de libros en la lista
-        for libro_id in lista['libros']:
-            # Buscar el libro en la lista de libros usando el ID (convertido a entero)
-            libro_encontrado = next((libro for libro in libros if libro['id'] == int(libro_id)), None)
-            if libro_encontrado:
+        for libro_id in lista.get('libros', []):
+            # Resolver el ID tanto en el catálogo local como en libros de Google Books
+            libro_encontrado = obtener_libro(libro_id)
+            if libro_encontrado and libro_encontrado not in libros_en_lista:
                 libros_en_lista.append(libro_encontrado)
 
         # Agregar la lista con los libros correspondientes
@@ -358,8 +456,6 @@ def perfil():
             'nombre': lista['nombre'],  # Nombre de la lista
             'libros': libros_en_lista     # Libros asociados a esa lista
         })
-
-        print(listas_con_libros)  # Esto imprimirá la lista actual de listas con libros en la consola para depuración
 
     # Renderizar el perfil con las listas que contienen libros
     return render_template('perfil.html', listas=listas_con_libros)
@@ -371,17 +467,18 @@ def lista_individual(lista_id):
     if lista_seleccionada is None:
         return "Lista no encontrada", 404
 
+    # Resolver cada ID guardado (local o de Google Books) sin duplicados,
+    # respetando el orden en que se agregaron
     libros_filtrados = []
-
-    for lista in listas_con_libros:
-        if lista['id'] == lista_seleccionada['id']:
-            # Solo agregar libros que estén en la lista_seleccionada
-            for libro in lista['libros']:
-                if str(libro['id']) in lista_seleccionada['libros']:
-                    libros_filtrados.append(libro)
-    
-    print(libros_filtrados)
-    print(lista_seleccionada)
+    ids_vistos = set()
+    for lid in lista_seleccionada.get('libros', []):
+        sid = str(lid).strip()
+        if sid in ids_vistos:
+            continue
+        libro = obtener_libro(sid)
+        if libro:
+            ids_vistos.add(sid)
+            libros_filtrados.append(libro)
 
     return render_template('lista.html', lista=lista_seleccionada, libros=libros_filtrados)
 
@@ -413,6 +510,20 @@ def upload_pdf():
         return 'No PDF file part', 400
     
     pdf_file = request.files['pdf_file']
+    if not pdf_file or not pdf_file.filename:
+        return 'No se seleccionó ningún archivo', 400
+
+    filename = pdf_file.filename.lower().strip()
+
+    # SEG-003: Rechazar formatos no permitidos (solo se acepta .pdf)
+    if not filename.endswith('.pdf'):
+        return 'Formato no permitido. Solo se aceptan archivos PDF. Rechazado', 400
+
+    # Criterio de aceptación: Verificar que no sea un archivo corrupto
+    header = pdf_file.read(5)
+    pdf_file.seek(0)
+    if not header.startswith(b'%PDF'):
+        return 'Archivo corrupto o formato no válido', 400
     
     # Obtener el nombre original sin la extensión
     original_filename = os.path.splitext(pdf_file.filename)[0]
@@ -446,43 +557,37 @@ def upload_pdf():
     # Renderizar el resultado en la página
     return render_template('traducir-completado.html', download_id=download_id, original_filename=original_filename)
 
+def _render_resultados(resultados: Optional[Dict], titulo: str, query: str):
+    """Renderiza resultados.html con libros normalizados al formato de inicio."""
+    items = (resultados or {}).get('items', [])
+    libros_resultado = [normalizar_libro_google(item) for item in items]
+    return render_template('resultados.html',
+                           libros=libros_resultado,
+                           titulo=titulo,
+                           query=query,
+                           listas=listas.values())
+
 @app.route('/buscar', methods=['POST'])
 def buscar():
-    """Ruta que procesa la búsqueda y redirecciona a los resultados"""
-    query = request.form.get('query', '')
+    """Ruta que procesa la búsqueda y muestra los resultados"""
+    query = request.form.get('query', '').strip()
     if not query:
-        return redirect(url_for('index'))
-        
+        return redirect(url_for('inicio'))
+
     resultados = buscar_libros(query)
-    
-    print(resultados)
-    if resultados is None:
-        # Manejar el error redirigiendo con un mensaje
-        return redirect(url_for('index'))
-    
-    # Guardar los resultados en la sesión o pasarlos como parámetro
-    return render_template('resultados.html', 
-                         libros=resultados.get('items', []),
-                         query=query)
+    return _render_resultados(resultados, f'Resultados de "{query}"', query)
 
 @app.route('/buscar_x_categoria', methods=['POST'])
 def buscar_categoria():
-    """Ruta que procesa la búsqueda y redirecciona a los resultados"""
-    query = request.form.get('query', '')
+    """Ruta que procesa la búsqueda por género del catálogo y muestra los resultados"""
+    query = request.form.get('query', '').strip()
     if not query:
-        return redirect(url_for('index'))
-        
+        return redirect(url_for('inicio'))
+
     resultados = buscar_libros_categoria(query)
-    
-    print(resultados)
-    if resultados is None:
-        # Manejar el error redirigiendo con un mensaje
-        return redirect(url_for('index'))
-    
-    # Guardar los resultados en la sesión o pasarlos como parámetro
-    return render_template('resultados.html', 
-                         libros=resultados.get('items', []),
-                         query=query)    
+    genero = GENEROS_CATALOGO.get(query.lower())
+    nombre = genero['nombre'] if genero else query
+    return _render_resultados(resultados, f'Catálogo: {nombre}', nombre)
 
 
 @app.route('/registro')

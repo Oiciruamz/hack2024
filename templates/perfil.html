@@ -1,67 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="../static/css/header_inicio.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header_inicio.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"> 
     <title>Perfil</title>
 
     <style>
-
-        .banner_bienvenida
-        {
+        .banner_bienvenida {
             display: flex;
             align-items: center;
             justify-content: space-around;
             background-color: #1E1E1E;
-            height: 170px;
+            min-height: 170px;
+            padding: 20px 0;
             margin-bottom: 20px;
-            
         }
 
-        .banner_bienvenida button
-        {
-            all: unset;
+        .btn-perfil {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
             text-align: center;
-            border-color: 1px solid #1E1E1E;
             border-radius: 5px;
             box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25); 
-            cursor: pointer; /* Opción si quieres mantener el puntero en mano */
-        }    
-        .genero
-        {
-            display: flex;
-            flex-direction: column;
-        }
-        .contenedor-tarjetas
-        {
-            display: flex;
-            margin-left: 60px;
-            width: 100%;
-            height: 50vh;
-        }
-        .tarjeta
-        {
-            width: 345px;
-            height: 240px;
-            margin-left: 40px;           
-            box-shadow: 0px 1px 1px rgb(69, 69, 69);
-            margin: 1px solid rgb(104, 104, 104);
-            border-radius: 5px;
+            cursor: pointer;
+            width: 160px;
+            height: 50px;
+            font-size: medium;
+            font-family: inherit;
+            border: 1px solid #1E1E1E;
+            box-sizing: border-box;
         }
 
-        .color-tarjeta
-        {
+        .contenedor-tarjetas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 0 60px 40px 60px;
+            min-height: 50vh;
+        }
+
+        .tarjeta {
+            width: 320px;
+            height: 240px;
+            box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgb(104, 104, 104);
+            border-radius: 5px;
+            overflow: hidden;
+            background-color: #fff;
+        }
+
+        .color-tarjeta {
             display: flex;
             justify-content: center;
             align-items: center;
-            align-content: center;
             width: 100%;
-            height: 53%;
-            margin-bottom: 20px;
+            height: 60%;
             background-color: rgb(166, 166, 166);
         }  
     </style>
@@ -69,47 +68,56 @@
 <body>
     {% include 'header.html' %}
 
-
     <section class="banner_bienvenida">
         <div style="display: flex; align-items: center;">
             <img src="{{ url_for('static', filename='images/usuario.svg') }}" alt="Icono usuario" style="object-fit: scale-down; width: 60px; height: 80px;">
-            <h1 style="color: white; margin: 0; margin-left: 20px; font-weight: 300;">¡Hola {{ current_user.email }}!</h1>
+            <h1 style="color: white; margin: 0; margin-left: 20px; font-weight: 300;">
+                ¡Hola {{ current_user.email if current_user.is_authenticated else 'Invitado' }}!
+            </h1>
         </div>
         <div style="display: flex; width: 380px; justify-content: space-between;">
-            <button type="button" style="width: 160px; height: 60px; background-color: rgba(67, 67, 67, 0.27); color: white;  font-size: medium; border-color: #1E1E1E;">Editar cuenta</button>
-            <button type="button" href="/logout" style="width: 160px; height: 60px; background-color: rgba(146, 65, 250, 0.6); color: white; font-size: medium; "><a href="/logout" style="text-decoration: none; color: white; padding: 10px;">Cerrar sesión</a></button>
+            <button type="button" class="btn-perfil" style="background-color: rgba(67, 67, 67, 0.27); color: white;">Editar cuenta</button>
+            <a href="{{ url_for('logout') }}" class="btn-perfil" style="background-color: rgba(146, 65, 250, 0.6); color: white;">Cerrar sesión</a>
         </div>
     </section>
 
     <main>
         <div>
-            <h2 style="margin-left: 100px; font-weight: 500;"> Tus Listas</h2>         
+            <h2 style="margin-left: 60px; font-weight: 500;">Tus Listas</h2>         
         </div>
         
         <div class="contenedor-tarjetas">
             {% for lista in listas %}
             <div class="tarjeta">
-                <div class="color-tarjeta"  style="background-color: {{ lista.color }};">
-                    <div style="display: flex; justify-content: center;  width: 100%; height: 100%;">
-                        {% set max_libros = 2 %}
-                        {% for libro in lista.libros %}
-                            {% if loop.index <= max_libros %}
-                                <img src="{{ url_for('static', filename='images/' + libro.imagen) }}" alt="{{ libro.titulo }}" style="width: 100%; height: 100%; object-fit: cover;">
-                            {% endif %}
+                <div class="color-tarjeta" data-color="{{ lista.color }}">
+                    <div style="display: flex; justify-content: center; width: 100%; height: 100%; gap: 10px; padding: 10px; box-sizing: border-box;">
+                        {% for libro in lista.libros[:2] %}
+                            <img src="{{ libro.imagen if (libro.imagen and libro.imagen.startswith('http')) else url_for('static', filename='images/' + libro.imagen) }}" alt="{{ libro.titulo }}" style="width: 45%; height: 100%; object-fit: cover; border-radius: 4px;">
                         {% endfor %}
                     </div>
                 </div>
-                <div style="margin-top: 20px;">
-                    <a  href="{{ url_for('lista_individual', lista_id=lista.id) }}" style="text-decoration: none; color: #1E1E1E;">
-                    <h5 style="margin-left: 10px;">{{ lista.nombre }}</h5>
-                    <h6 style="margin-left: 10px;"></h6>
+                <div style="padding: 15px;">
+                    <a href="{{ url_for('lista_individual', lista_id=lista.id) }}" style="text-decoration: none; color: #1E1E1E;">
+                        <h4 style="margin: 0;">{{ lista.nombre }}</h4>
+                        <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">{{ lista.libros|length }} libros</p>
                     </a>
                 </div>
             </div>
+            {% else %}
+            <p style="margin-left: 60px; color: #777;">No tienes listas creadas aún.</p>
             {% endfor %}
         </div>
     </main>
 
     {% include 'footer.html' %}
+
+    <script>
+        document.querySelectorAll('.color-tarjeta[data-color]').forEach(function(el) {
+            var color = el.getAttribute('data-color');
+            if (color) {
+                el.style.backgroundColor = color;
+            }
+        });
+    </script>
 </body>
 </html>

@@ -124,19 +124,37 @@ def build_braille_word(trimmed_word, shavings, index, braille):
     return braille
 
 
-def translate(string):
-    # Convert alphabetic text to braille.
-    braille = ""
-    words = extract_words(string)
+def translate_word(word):
+    if not word:
+        return ""
+    word = numbers_handler(word)
+    word = capital_letters_handler(word)
+    trimmed_word = trim(word)  # Remove punctuation (ex: change dog?" to dog)
+    untrimmed_word = word
+    index = untrimmed_word.find(trimmed_word)
+    shavings = untrimmed_word.replace(trimmed_word, "")
+    return build_braille_word(trimmed_word, shavings, index, "")
+
+
+def translate_line(line):
+    if not line:
+        return ""
+    words = line.split(" ")
+    translated_words = []
     for word in words:
-        word = numbers_handler(word)
-        word = capital_letters_handler(word)
-        trimmed_word = trim(word)  # Remove punctuation (ex: change dog?" to dog)
-        untrimmed_word = word
-        index = untrimmed_word.find(trimmed_word)
-        shavings = untrimmed_word.replace(trimmed_word, "")
-        braille = build_braille_word(trimmed_word, shavings, index, braille) + " "
-    return braille[:-1]  # Remove the final space that was added.
+        if not word:
+            translated_words.append("")
+        else:
+            translated_words.append(translate_word(word))
+    return " ".join(translated_words)
+
+
+def translate(string):
+    # Convert alphabetic text to braille, preserving line breaks.
+    if not string:
+        return ""
+    lines = string.split("\n")
+    return "\n".join(translate_line(line) for line in lines)
 
 '''
 The Algorithm for Translating Alphabet Based Text to Grade 2 Braille:

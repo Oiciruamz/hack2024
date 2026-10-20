@@ -1,0 +1,51 @@
+{# Modal "Añadir a lista / Nueva lista" compartido por inicio.html y resultados.html.
+   Requiere la variable `listas` en el contexto y static/css/catalogo.css. #}
+<!-- Modal para seleccionar o crear una lista -->
+<div id="modal" class="modal">
+    <div class="modal-content" id="modal-content">
+
+        <div
+            style="display: flex; flex-direction: row; justify-content: space-between; border-bottom: 2px solid #C5C5C5;">
+            <h3 id="modal-title" style="margin: 0; margin-bottom: 10px;">Añadir a lista</h3>
+            <span class="close" id="close-btn">&times;</span>
+        </div>
+
+
+        <div id="lista-contenido">
+            <!-- Aquí aparecerán las listas, si existen -->
+            <ul
+                style="list-style: none; padding: 0; display: flex; flex-direction: column; align-items: center; border-bottom: 2px solid #C5C5C5;">
+                {% for lista in listas %}
+                <li style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <input name="lista" type="checkbox" id="checkbox_{{ lista.id }}" value="{{ lista.id }}"
+                        style="margin-right: 15px;">
+                    <label for="checkbox_{{ lista.id }}" style="width: 100px; text-align: left;">{{ lista.nombre
+                        }}</label>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <!-- Botón para agregar a la lista -->
+            <button id="agregar-btn" class="agregar-btn" style="width: 150px; background-color: #653F95;">Agregar a
+                Lista</button>
+
+            <!-- Botón para crear nueva lista -->
+            <button id="crear-lista-btn" class="cancel crear-lista-btn"
+                style="width: 150px; color: #6C479B; font-weight: 700;">Nueva lista</button>
+        </div>
+
+        <!-- Modal para crear una nueva lista -->
+        <div id="nueva-lista-contenido" style="display: none;">
+            <h5 style="margin: 0; margin-top: 15px; text-align: left; margin-left: 50px; font-weight: 500;">Nombre
+                de la lista</h5>
+            <input id="input-text" type="text" style="margin: 0; margin-bottom: 15px; margin-top: 2px;"
+                placeholder="Favoritos">
+            <button id="nueva-lista-confirm" style="background-color: #653F95;">Aceptar</button>
+            <button class="cancel" id="cancelar-nueva-lista"
+                style="color: #6C479B; font-weight: 700;">Cancelar</button>
+        </div>
+
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>

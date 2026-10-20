@@ -1,5 +1,6 @@
 from fpdf import FPDF
 import os
+import re
 
 class PDF(FPDF):
     def header(self):
@@ -33,8 +34,13 @@ class PDF(FPDF):
         # Establecer fuente DejaVu Sans
         self.set_font("DejaVu", size=20)
 
-        # Agregar texto
-        self.multi_cell(0, 10, text)
+        # Limpiar texto y saltos vacíos excesivos
+        clean_text = text.strip() if text else ""
+        clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
+
+        # Agregar texto con alineación a la izquierda ('L') para evitar que se justifique
+        # y genere espacios en blanco gigantes entre palabras
+        self.multi_cell(0, 10, clean_text, align="L")
 
         # Guardar el PDF
         self.output(file_path)

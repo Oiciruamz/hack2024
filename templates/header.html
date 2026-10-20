@@ -246,9 +246,9 @@
     <form action="{{ url_for('buscar_categoria') }}" method="POST">
         <select name="query" class="sin_estilo" style="font-size: small; color: white;" onchange="this.form.submit()">
             <option value="" style="color: black;" hidden>Catálogo</option>
-            <option value="Horror, terror, miedo" style="color: black;">Terror</option>
-            <option value="Clásicos, Literatura clásica " style="color: black;">Clásicos</option>
-            <option value="Ciencias, matemáticas, algebra, física" style="color: black;">Ciencias y matemáticas</option>
+            {% for clave, genero in (generos_catalogo or {}).items() %}
+            <option value="{{ clave }}" style="color: black;">{{ genero.nombre }}</option>
+            {% endfor %}
         </select>
     </form>
       

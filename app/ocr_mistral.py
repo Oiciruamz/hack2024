@@ -302,13 +302,18 @@ def clean_markdown_and_invisibles(text: str) -> str:
     # Cualquier asterisco residual huérfano
     text = text.replace("*", "")
 
-    # Normalizar espacios múltiples por línea
+    # Normalizar espacios múltiples por línea y evitar múltiples líneas vacías consecutivas
     lines = []
+    prev_blank = False
     for line in text.split("\n"):
         clean_line = " ".join(line.split())
+        is_blank = not clean_line
+        if is_blank and prev_blank:
+            continue
         lines.append(clean_line)
+        prev_blank = is_blank
 
-    return "\n".join(lines)
+    return "\n".join(lines).strip()
 
 
 def refine_text_with_ai(text: str) -> str:

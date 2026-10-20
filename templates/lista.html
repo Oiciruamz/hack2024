@@ -1,148 +1,677 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"> 
-    <link rel="stylesheet" href="../static/css/header_inicio.css">
-    <title>Lista </title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header_inicio.css') }}">
+    <title>Lista - {{ lista.nombre }}</title>
 
     <style>
-
-        .banner_bienvenida
-        {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            background-color: #1E1E1E;
-            height: 170px;
-            margin-bottom: 20px;
-            
-        }
-
-        .genero
-        {
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background-color: #FAFAFA;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            margin-bottom: 300px;
         }
-        .contenedor-tarjetas
-        {
+
+        .banner_bienvenida {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #1E1E1E;
+            min-height: 150px;
+            padding: 20px 60px;
+            box-sizing: border-box;
+            margin-bottom: 25px;
+        }
+
+        .banner-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-volver-perfil {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-volver-perfil:hover {
+            background-color: rgba(255, 255, 255, 0.22);
+            transform: translateX(-2px);
+        }
+
+        .genero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 60px;
+        }
+
+        .encabezado-seccion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0 60px 20px 60px;
+        }
+
+        .contenedor-tarjetas {
             display: flex;
             flex-wrap: wrap;
-            justify-content: space-evenly;
-            width: 100%;
-            height: 50vh;
-            /* border: 2px solid black; */
-        }
-        .tarjeta
-        {
-            display: flex;
-            width: 455px;
-            margin-top: 40px;
-            margin-left: 5px;
-            height: 27vh;
-            box-shadow: 0px 1px 1px rgb(69, 69, 69);
+            gap: 25px;
+            margin: 0 60px;
+            min-height: 35vh;
         }
 
-        .color-tarjeta
-        {
+        .tarjeta {
             display: flex;
+            width: 440px;
+            min-height: 220px;
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease, margin 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .tarjeta:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .tarjeta.removiendo {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+
+        .portada-tarjeta {
+            flex: 0 0 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .img-portada {
+            width: 110px;
+            height: 165px;
+            object-fit: cover;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+        }
+
+        .info-tarjeta {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 18px 20px;
+            box-sizing: border-box;
+            min-width: 0;
+        }
+
+        .titulo-libro {
+            margin: 0 0 6px 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #1E1E1E;
+            line-height: 1.35;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .autor-libro {
+            margin: 0 0 18px 0;
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #64748B;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .acciones-tarjeta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .boton-tarjeta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s ease;
+            box-sizing: border-box;
+        }
+
+        .btn-descargar {
+            background-color: #653F95;
+            color: #FFFFFF;
+        }
+
+        .btn-descargar:hover {
+            background-color: #52317B;
+        }
+
+        .btn-eliminar {
+            background-color: #FEE2E2;
+            color: #DC2626;
+            border: 1px solid #FECACA;
+        }
+
+        .btn-eliminar:hover {
+            background-color: #FCA5A5;
+            color: #991B1B;
+        }
+
+        /* Estado vacío */
+        .estado-vacio {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 60px 20px;
+            text-align: center;
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            border: 2px dashed #CBD5E1;
+            box-sizing: border-box;
+        }
+
+        .icono-vacio {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        .estado-vacio h4 {
+            margin: 0 0 8px 0;
+            font-size: 1.25rem;
+            color: #1E293B;
+            font-weight: 600;
+        }
+
+        .estado-vacio p {
+            margin: 0 0 20px 0;
+            color: #64748B;
+            max-width: 420px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .btn-explorar-catalogo {
+            display: inline-flex;
+            align-items: center;
+            background-color: #653F95;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.92rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-explorar-catalogo:hover {
+            background-color: #52317B;
+        }
+
+        /* Modal de confirmación */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             justify-content: center;
             align-items: center;
-            align-content: center;
-            margin-bottom: 80px;
+            padding: 20px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 0.2s ease;
         }
 
-        .boton-tarjeta
-        {
-            display:flex; 
-            justify-content: center; 
-            align-items: center; 
-            border: 2px solid black;
-            width: 85px;
-            border-radius: 5px;
-            height: 35px;
+        .modal.mostrar {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            padding: 30px 24px;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 430px;
+            text-align: center;
+            transform: scale(0.95);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            box-sizing: border-box;
+        }
+
+        .modal.mostrar .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-icono-alerta {
+            width: 56px;
+            height: 56px;
+            background-color: #FEE2E2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+        }
+
+        #modal-titulo {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 10px 0;
+        }
+
+        .modal-mensaje {
+            color: #4B5563;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            margin: 0 0 10px 0;
+            word-break: break-word;
+        }
+
+        .modal-aviso {
+            color: #6B7280;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            margin: 0 0 24px 0;
+        }
+
+        .modal-botones {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-modal {
+            padding: 10px 22px;
+            font-size: 0.92rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancelar {
+            background-color: #F3F4F6;
+            color: #374151;
+            border: 1px solid #D1D5DB;
+        }
+
+        .btn-cancelar:hover {
+            background-color: #E5E7EB;
+            color: #111827;
+        }
+
+        .btn-peligro {
+            background-color: #DC2626;
+            color: #FFFFFF;
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-peligro:hover {
+            background-color: #B91C1C;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-peligro:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Toast de notificación */
+        .toast-alerta {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: #1E293B;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+
+        .toast-alerta.mostrar {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .toast-alerta.error {
+            background-color: #DC2626;
+        }
+
+        @media (max-width: 768px) {
+            .banner_bienvenida {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                padding: 20px 24px;
+            }
+
+            .encabezado-seccion,
+            .contenedor-tarjetas {
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+
+            .tarjeta {
+                width: 100%;
+            }
         }
     </style>
 </head>
+
 <body>
     {% include 'header.html' %}
 
     <section class="banner_bienvenida">
-        <div style="display: flex; align-items: center;">
-            <img src="{{ url_for('static', filename='images/lista.svg') }}" alt="Icono usuario" style="object-fit: scale-down; width: 40px; height: 60px; filter: brightness(0) invert(1);">
-            <h1 style="color: white; margin: 0; margin-left: 20px; font-weight: 300;">{{ lista.nombre}}</h1>
+        <div class="banner-info">
+            <img src="{{ url_for('static', filename='images/lista.svg') }}" alt="Icono lista"
+                style="object-fit: scale-down; width: 42px; height: 56px; filter: brightness(0) invert(1);">
+            <div>
+                <h1 style="color: white; margin: 0; font-weight: 300; font-size: 1.8rem;">{{ lista.nombre }}</h1>
+                <p id="contador-libros" style="color: #cbd5e1; margin: 4px 0 0 0; font-size: 0.88rem;">
+                    <span id="num-libros">{{ libros|length }}</span> {{ 'libro' if libros|length == 1 else 'libros' }}
+                    en esta lista
+                </p>
+            </div>
+        </div>
+        <div>
+            <a href="{{ url_for('perfil') }}" class="btn-volver-perfil" title="Volver a tus listas">
+                ← Volver a Mis Listas
+            </a>
         </div>
     </section>
 
     <main class="genero">
+        <div class="encabezado-seccion">
+            <h3 style="margin: 0; font-weight: 500; font-size: 1.3rem; color: #1E1E1E;">Libros en la lista "{{ lista.nombre }}"</h3>
+        </div>
 
-        <h3 style="margin-left: 60px;">Libros en la lista {{lista.nombre}}</h3>
-
-        <div class="contenedor-tarjetas">
-
+        <div class="contenedor-tarjetas" id="contenedor-tarjetas">
             {% for libro in libros %}
-            <div class="tarjeta">
-                <div class="color-tarjeta" >
-                    <div style=" display: flex; justify-content: center; margin-top: 35px; width: 100%; height: 100%; margin-left: 50px; margin-right: 50px;">
-                        <img src="{{ url_for('static', filename='images/' + libro.imagen) }}" alt="" style=" width: 120px; height: 180px; object-fit: fill; box-shadow: 0px 1px 2px black;">
-                    </div>
-                    
+            <div class="tarjeta" id="tarjeta-libro-{{ libro.id }}" data-id="{{ libro.id }}">
+                <div class="portada-tarjeta">
+                    <img src="{{ libro.imagen if (libro.imagen and libro.imagen.startswith('http')) else (url_for('static', filename='images/' + libro.imagen) if libro.imagen else url_for('static', filename='images/descargar.png')) }}"
+                        alt="Portada de {{ libro.titulo }}" class="img-portada"
+                        onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/descargar.png') }}';">
                 </div>
 
-                <div style="width: 100%; display: flex; flex-direction: column; justify-content: center;">
-                    <h5 style="margin: 0px; margin-bottom: 5px;">{{ libro.titulo }}</h5>
-                    <h6 style="margin: 0px; margin-bottom: 20px; font-weight: 500;">{{ libro.autor }}</h6>
+                <div class="info-tarjeta">
+                    <h5 class="titulo-libro" title="{{ libro.titulo }}">{{ libro.titulo }}</h5>
+                    <h6 class="autor-libro" title="{{ libro.autor }}">{{ libro.autor }}</h6>
 
-                    <div style="display: flex; justify-content: space-evenly; text-align: center;">
-
-                        <a href="{{ url_for('descargar_libro', titulo=libro.titulo) }}" class="boton-tarjeta" style="border-color: #653F95; background-color: #653F95; color: white; text-decoration: none; cursor: pointer;">
-                            <p style="font-size: 12px; margin: 0px;">Descargar</p>
+                    <div class="acciones-tarjeta">
+                        <a href="{{ url_for('descargar_libro', titulo=libro.titulo) }}"
+                            class="boton-tarjeta btn-descargar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>Descargar</span>
                         </a>
 
-                        <button class="boton-tarjeta guardar-btn" 
-                                data-libro-id="{{ libro.id }}"
-                                style="background-color: #D6BCF8; border-color: #D6BCF8; color: #653F95; font-weight: 600; cursor: pointer;">
-                            <p style="font-size: 12px; margin: 0px;">Eliminar</p>
+                        <button type="button" class="boton-tarjeta btn-eliminar" data-libro-id="{{ libro.id }}"
+                            data-libro-titulo="{{ libro.titulo }}" title="Eliminar este libro de la lista">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                </path>
+                            </svg>
+                            <span>Eliminar</span>
                         </button>
-
-                        
-
                     </div>
                 </div>
-
             </div>
             {% endfor %}
+
+            <div id="estado-vacio" class="estado-vacio"
+                style="{% if libros %}display: none;{% else %}display: flex;{% endif %}">
+                <h4>No hay libros en esta lista</h4>
+                <p>Tu lista está vacía. Puedes explorar el catálogo principal y agregar los libros que desees.</p>
+                <a href="{{ url_for('inicio') }}" class="btn-explorar-catalogo">Explorar catálogo</a>
+            </div>
         </div>
     </main>
-        
+
+    <!-- Modal de confirmación para eliminar libro -->
+    <div id="modal-confirmar" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+        <div class="modal-content">
+            <div class="modal-icono-alerta">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            </div>
+            <h3 id="modal-titulo">¿Eliminar libro de la lista?</h3>
+            <p class="modal-mensaje">
+                ¿Estás seguro de que deseas eliminar <strong id="modal-libro-titulo"></strong> de tu lista <strong>"{{ lista.nombre }}"</strong>?
+            </p>
+            <p class="modal-aviso">
+                Esta acción solo quitará el libro de esta lista. Podrás volver a agregarlo desde el catálogo cuando
+                quieras.
+            </p>
+            <div class="modal-botones">
+                <button type="button" id="btn-cancelar-modal" class="btn-modal btn-cancelar">Cancelar</button>
+                <button type="button" id="btn-confirmar-modal" class="btn-modal btn-peligro">
+                    <span id="btn-confirmar-texto">Sí, eliminar</span>
+                    <span id="btn-confirmar-spinner" style="display: none;">Eliminando...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast de notificación -->
+    <div id="toast-notificacion" class="toast-alerta" role="status" aria-live="polite">
+        <span id="toast-icono">✓</span>
+        <span id="toast-texto"></span>
+    </div>
 
     <script>
+        let libroSeleccionado = null;
+        const modal = document.getElementById('modal-confirmar');
+        const modalLibroTitulo = document.getElementById('modal-libro-titulo');
+        const btnCancelar = document.getElementById('btn-cancelar-modal');
+        const btnConfirmar = document.getElementById('btn-confirmar-modal');
+        const btnConfirmarTexto = document.getElementById('btn-confirmar-texto');
+        const btnConfirmarSpinner = document.getElementById('btn-confirmar-spinner');
+        const toast = document.getElementById('toast-notificacion');
+        const toastTexto = document.getElementById('toast-texto');
+        const toastIcono = document.getElementById('toast-icono');
+        let toastTimer = null;
 
+        function mostrarToast(mensaje, esError = false) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTexto.textContent = mensaje;
+            toastIcono.textContent = esError ? '⚠' : '✓';
+            toast.className = 'toast-alerta' + (esError ? ' error' : '') + ' mostrar';
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('mostrar');
+            }, 3500);
+        }
 
-        function setupGuardarButtons() 
-        {
-            document.querySelectorAll('.guardar-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const tarjeta = this.closest('.tarjeta');
-                    if (tarjeta) {
-                        tarjeta.style.display = 'none'; // Oculta la tarjeta cuando se hace clic en el botón
-                    } else {
-                        console.error('No se encontró una tarjeta asociada a este botón');
-                    }
-                    // Aquí puedes agregar cualquier otra lógica que necesites ejecutar al hacer clic
-                });
+        function abrirModal(libroId, libroTitulo) {
+            libroSeleccionado = { id: libroId, titulo: libroTitulo };
+            modalLibroTitulo.textContent = `"${libroTitulo}"`;
+            modal.classList.add('mostrar');
+            btnCancelar.focus();
+        }
+
+        function cerrarModal() {
+            modal.classList.remove('mostrar');
+            libroSeleccionado = null;
+            btnConfirmar.disabled = false;
+            btnConfirmarTexto.style.display = 'inline';
+            btnConfirmarSpinner.style.display = 'none';
+        }
+
+        btnCancelar.addEventListener('click', cerrarModal);
+
+        // Cerrar si se hace clic fuera del contenido del modal
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                cerrarModal();
+            }
+        });
+
+        // Cerrar con tecla Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('mostrar')) {
+                cerrarModal();
+            }
+        });
+
+        // Conectar botones de eliminar de las tarjetas
+        function inicializarBotonesEliminar() {
+            document.querySelectorAll('.btn-eliminar').forEach(boton => {
+                boton.onclick = function () {
+                    const libroId = this.getAttribute('data-libro-id');
+                    const libroTitulo = this.getAttribute('data-libro-titulo') || 'este libro';
+                    abrirModal(libroId, libroTitulo);
+                };
             });
         }
-        
-        setupGuardarButtons()
+        inicializarBotonesEliminar();
 
-        
+        // Confirmar eliminación
+        btnConfirmar.addEventListener('click', async function () {
+            if (!libroSeleccionado) return;
+
+            btnConfirmar.disabled = true;
+            btnConfirmarTexto.style.display = 'none';
+            btnConfirmarSpinner.style.display = 'inline';
+
+            try {
+                const respuesta = await fetch('/eliminar_libro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        libro_id: libroSeleccionado.id,
+                        lista_id: {{ lista.id | tojson }}
+                    })
+                });
+
+                const datos = await respuesta.json();
+
+                if (respuesta.ok && datos.success) {
+                    const idEliminado = libroSeleccionado.id;
+                    cerrarModal();
+
+                    // Animar y remover la tarjeta del DOM
+                    const tarjeta = document.getElementById('tarjeta-libro-' + idEliminado);
+                    if (tarjeta) {
+                        tarjeta.classList.add('removiendo');
+                        setTimeout(() => {
+                            tarjeta.remove();
+
+                            // Actualizar el conteo de libros (priorizando conteo del backend)
+                            const tarjetasRestantes = document.querySelectorAll('.tarjeta:not(.removiendo)').length;
+                            const totalLibros = typeof datos.total_libros === 'number' ? datos.total_libros : tarjetasRestantes;
+                            const contadorTexto = document.getElementById('contador-libros');
+                            if (contadorTexto) {
+                                contadorTexto.innerHTML = `<span id="num-libros">${totalLibros}</span> ${totalLibros === 1 ? 'libro' : 'libros'} en esta lista`;
+                            }
+
+                            // Si no quedan tarjetas, mostrar estado vacío
+                            if (totalLibros === 0) {
+                                const estadoVacio = document.getElementById('estado-vacio');
+                                if (estadoVacio) {
+                                    estadoVacio.style.display = 'flex';
+                                }
+                            }
+                        }, 300);
+                    }
+
+                    mostrarToast('Libro eliminado de la lista correctamente.');
+                } else {
+                    cerrarModal();
+                    mostrarToast(datos.message || 'Error al eliminar el libro de la lista.', true);
+                }
+            } catch (err) {
+                console.error('Error al intentar eliminar libro:', err);
+                cerrarModal();
+                mostrarToast('Error de conexión al eliminar el libro.', true);
+            }
+        });
     </script>
 
     {% include 'footer.html' %}
 </body>
+
 </html>
