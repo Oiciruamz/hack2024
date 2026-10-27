@@ -36,6 +36,11 @@ ocr_mistral = importlib.util.module_from_spec(spec_ocr)
 sys.modules["app.ocr_mistral"] = ocr_mistral
 spec_ocr.loader.exec_module(ocr_mistral)
 
+spec_bdoc = importlib.util.spec_from_file_location("app.braille_document", PACKAGE_DIR / "braille_document.py")
+braille_doc = importlib.util.module_from_spec(spec_bdoc)
+sys.modules["app.braille_document"] = braille_doc
+spec_bdoc.loader.exec_module(braille_doc)
+
 spec_fb = importlib.util.spec_from_file_location("app.firebase_service", PACKAGE_DIR / "firebase_service.py")
 fb = importlib.util.module_from_spec(spec_fb)
 sys.modules["app.firebase_service"] = fb
@@ -559,6 +564,29 @@ def inicio():
     
     return render_template('inicio.html', libros=libros, listas=_listas_usuario())
 
+import json
+import re
+
+def _sesion_revision_path(review_id: str) -> str:
+    safe_id = re.sub(r'[^a-zA-Z0-9_\-]', '', str(review_id))
+    return os.path.join(TEMP_FILES_DIR, f'rev_{safe_id}.json')
+
+def _guardar_sesion_revision(review_id: str, doc_data: dict) -> None:
+    path = _sesion_revision_path(review_id)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(doc_data, f, ensure_ascii=False, indent=2)
+
+def _obtener_sesion_revision(review_id: str) -> Optional[dict]:
+    path = _sesion_revision_path(review_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as exc:
+        app.logger.error("Error al leer sesión de revisión %s: %s", review_id, exc)
+        return None
+
 # Ruta para procesar el PDF y traducirlo a Braille
 @app.route('/upload', methods=['POST'])
 def upload_pdf():
@@ -583,6 +611,7 @@ def upload_pdf():
     
     # Obtener el nombre original sin la extensión
     original_filename = os.path.splitext(pdf_file.filename)[0]
+    allow_review = request.form.get('allow_review') in ('1', 'true', 'on', True)
 
     # Crear directorio temporal si no existe
     if not os.path.exists(TEMP_FILES_DIR):
@@ -592,7 +621,33 @@ def upload_pdf():
     file_path = os.path.join(TEMP_FILES_DIR, 'temp_pdf.pdf')
     pdf_file.save(file_path)
 
-    # Extraer texto con Mistral OCR y traducir a Braille
+    if allow_review:
+        # Flujo Opt-In: Extraer estructura de documento para revisión previa
+        try:
+            doc = ocr_mistral.extract_structured_document(file_path, filename=original_filename)
+        except ocr_mistral.MistralOCRError as exc:
+            return str(exc), 502
+        except Exception as exc:
+            return f"Error inesperado al procesar el PDF: {exc}", 500
+
+        # Sanitizar y normalizar texto de cada página preservando tablas
+        for p in doc.get('pages', []):
+            clean_t = ocr_mistral.clean_markdown_and_invisibles(p.get('text', ''))
+            p['text'] = clean_t
+            p['original_text'] = clean_t
+            p['blocks'] = braille_doc.parse_markdown_into_blocks(clean_t, page_number=p['page_number'])
+            p['original_blocks'] = [dict(b) for b in p['blocks']]
+
+        for p in doc.get('original_pages', []):
+            clean_orig = ocr_mistral.clean_markdown_and_invisibles(p.get('text', ''))
+            p['text'] = clean_orig
+            p['blocks'] = braille_doc.parse_markdown_into_blocks(clean_orig, page_number=p['page_number'])
+
+        review_id = uuid.uuid4().hex
+        _guardar_sesion_revision(review_id, doc)
+        return redirect(url_for('revisar_documento', review_id=review_id))
+
+    # Flujo directo habitual (sin revisión)
     try:
         lines = ocr_mistral.extract_text_from_pdf(file_path)
     except ocr_mistral.MistralOCRError as exc:
@@ -604,14 +659,190 @@ def upload_pdf():
     texto = ocr_mistral.clean_and_refine_for_braille(texto, use_ai=True)
     braille = mn.user_text(texto)
 
-    # Guardar el texto Braille temporalmente para descargarlo luego
+    # Guardar el texto Braille Unicode para el PDF y Braille ASCII para BRF
     download_id = uuid.uuid4().hex
     braille_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
     with open(braille_path, 'w', encoding='utf-8') as f:
         f.write(braille)
 
+    brf_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.brf')
+    with open(brf_path, 'w', encoding='utf-8') as f:
+        f.write(braille_doc.unicode_to_braille_ascii(braille))
+
     # Renderizar el resultado en la página
     return render_template('traducir-completado.html', download_id=download_id, original_filename=original_filename)
+
+
+@app.route('/demo-review', methods=['POST', 'GET'])
+def demo_review():
+    """Sesión de demostración para probar el editor de revisión braille sin requerir PDF ni API key."""
+    sample_text_page_1 = (
+        "# El jardín de las palabras\n\n"
+        "Capítulo 1\n\n"
+        "La biblioteca abrió sus puertas una mañana de primavera. "
+        "Marta encontró un libro antiguo y comenzó a leer con entusiasmo.\n\n"
+        "A veces, las historias nos permiten descubrir nuevos mundos.\n\n"
+        "[INICIO DE TABLA: 2 columnas]\n"
+        "Fila 1:\n"
+        "- Contenido: Introducción\n"
+        "- Página: 3\n"
+        "Fila 2:\n"
+        "- Contenido: El viaje\n"
+        "- Página: 12\n"
+        "[FIN DE TABLA]"
+    )
+    sample_text_page_2 = (
+        "# Capítulo 2: Nuevos horizontes\n\n"
+        "El mapa indicaba 45 kilómetros hacia el este. "
+        "Marta preparó su cuaderno de notas con números y signos: 123 + 456 = 579.\n\n"
+        "«¡Cada libro es un viaje accesible!», afirmó con alegría."
+    )
+    doc = braille_doc.build_document_structure(
+        [sample_text_page_1, sample_text_page_2],
+        filename="el-jardin-de-las-palabras.pdf"
+    )
+    review_id = uuid.uuid4().hex
+    _guardar_sesion_revision(review_id, doc)
+    return redirect(url_for('revisar_documento', review_id=review_id))
+
+
+@app.route('/revisar/<review_id>')
+def revisar_documento(review_id):
+    doc = _obtener_sesion_revision(review_id)
+    if not doc:
+        return redirect(url_for('index'))
+
+    page_1_text = doc['pages'][0]['text'] if doc.get('pages') else ''
+    initial_braille = mn.user_text(page_1_text) if page_1_text else ''
+    return render_template(
+        'traducir-revision.html',
+        doc=doc,
+        review_id=review_id,
+        initial_braille=initial_braille
+    )
+
+
+@app.route('/api/traducir-braille', methods=['POST'])
+def api_traducir_braille():
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    seq = data.get('seq', 0)
+
+    try:
+        # Sanitizar formato markdown (negritas, cursivas, etc.) antes de traducir para evitar '?'
+        clean_text = ocr_mistral.clean_markdown_and_invisibles(text)
+        # Traducción con el motor real de la plataforma
+        braille_unicode = mn.user_text(clean_text)
+        brf_preview = braille_doc.unicode_to_braille_ascii(braille_unicode)
+        return jsonify({
+            'success': True,
+            'braille': braille_unicode,
+            'brf': brf_preview,
+            'seq': seq
+        })
+    except Exception as exc:
+        app.logger.error("Error en api_traducir_braille: %s", exc)
+        return jsonify({
+            'success': False,
+            'message': str(exc),
+            'seq': seq
+        }), 500
+
+
+@app.route('/api/guardar-revision/<review_id>', methods=['POST'])
+def api_guardar_revision(review_id):
+    doc = _obtener_sesion_revision(review_id)
+    if not doc:
+        return jsonify({'success': False, 'message': 'Sesión no encontrada.'}), 404
+
+    data = request.get_json(silent=True) or {}
+    page_idx = int(data.get('page_index', 0))
+    text = data.get('text', '')
+
+    if 0 <= page_idx < len(doc['pages']):
+        doc['pages'][page_idx]['text'] = text
+        doc['pages'][page_idx]['blocks'] = braille_doc.parse_markdown_into_blocks(text, page_number=page_idx + 1)
+        _guardar_sesion_revision(review_id, doc)
+        return jsonify({'success': True, 'message': 'Cambios guardados.'})
+
+    return jsonify({'success': False, 'message': 'Índice de página inválido.'}), 400
+
+
+@app.route('/api/restaurar-ocr/<review_id>', methods=['POST'])
+def api_restaurar_ocr(review_id):
+    doc = _obtener_sesion_revision(review_id)
+    if not doc:
+        return jsonify({'success': False, 'message': 'Sesión no encontrada.'}), 404
+
+    data = request.get_json(silent=True) or {}
+    page_idx = int(data.get('page_index', 0))
+
+    if 0 <= page_idx < len(doc['pages']):
+        orig_text = doc['original_pages'][page_idx]['text']
+        doc['pages'][page_idx]['text'] = orig_text
+        doc['pages'][page_idx]['blocks'] = [dict(b) for b in doc['original_pages'][page_idx]['blocks']]
+        _guardar_sesion_revision(review_id, doc)
+        braille_unicode = mn.user_text(orig_text)
+        return jsonify({
+            'success': True,
+            'text': orig_text,
+            'braille': braille_unicode,
+            'message': 'Texto OCR original restaurado.'
+        })
+
+    return jsonify({'success': False, 'message': 'Índice de página inválido.'}), 400
+
+
+@app.route('/finalizar-revision/<review_id>', methods=['POST'])
+def finalizar_revision(review_id):
+    doc = _obtener_sesion_revision(review_id)
+    if not doc:
+        return redirect(url_for('index'))
+
+    # Si se envió el texto de la página actual desde el formulario
+    page_idx = int(request.form.get('page_index', 0))
+    current_page_text = request.form.get('current_page_text')
+    if current_page_text is not None and 0 <= page_idx < len(doc['pages']):
+        doc['pages'][page_idx]['text'] = current_page_text
+        doc['pages'][page_idx]['blocks'] = braille_doc.parse_markdown_into_blocks(current_page_text, page_number=page_idx + 1)
+
+    # Generar texto consolidado de todo el documento editado
+    full_text = braille_doc.document_to_full_text(doc)
+    if not full_text.strip():
+        full_text = "(Documento vacío)"
+
+    # Limpiar formato Markdown visual antes de traducir
+    full_text = ocr_mistral.clean_markdown_and_invisibles(full_text)
+
+    # Traducción final con el motor de la plataforma
+    final_braille = mn.user_text(full_text)
+    final_brf = braille_doc.unicode_to_braille_ascii(final_braille)
+
+    # Generar identificador de descarga único
+    download_id = uuid.uuid4().hex
+
+    # Guardar archivo de texto Unicode (para creación de PDF con DejaVuSans)
+    braille_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
+    with open(braille_path, 'w', encoding='utf-8') as f:
+        f.write(final_braille)
+
+    # Guardar archivo .brf estándar (Braille ASCII)
+    brf_path = os.path.join(TEMP_FILES_DIR, f'{download_id}.brf')
+    with open(brf_path, 'w', encoding='utf-8') as f:
+        f.write(final_brf)
+
+    # Marcar sesión como confirmada
+    doc['confirmed'] = True
+    doc['download_id'] = download_id
+    _guardar_sesion_revision(review_id, doc)
+
+    original_filename = doc.get('filename') or 'documento'
+    return render_template(
+        'traducir-completado.html',
+        download_id=download_id,
+        original_filename=original_filename,
+        review_id=review_id
+    )
 
 def _render_resultados(resultados: Optional[Dict], titulo: str, query: str):
     """Renderiza resultados.html con libros normalizados al formato de inicio."""
@@ -646,10 +877,10 @@ def buscar_categoria():
     return _render_resultados(resultados, f'Catálogo: {nombre}', nombre)
 
 
-@app.route('/download_braille', methods=['POST'])
+@app.route('/download_braille', methods=['GET', 'POST'])
 def download_braille():
-    download_id = request.form.get('download_id')
-    original_filename = request.form.get('original_filename', 'braille_document')
+    download_id = request.values.get('download_id')
+    original_filename = request.values.get('original_filename', 'braille_document')
     
     if not download_id:
         return 'Descarga inválida', 400
@@ -683,25 +914,38 @@ def download_braille():
     # Enviar el archivo para descargar con el nombre original modificado
     return send_file(file_path, as_attachment=True, download_name=f'{original_filename}_braille.pdf')
 
-@app.route('/download_brf', methods=['POST'])
+@app.route('/download_brf', methods=['GET', 'POST'])
 def download_brf():
-    download_id = request.form.get('download_id')
-    original_filename = request.form.get('original_filename', 'braille_document')
+    download_id = request.values.get('download_id')
+    original_filename = request.values.get('original_filename', 'braille_document')
     
     if not download_id:
         return 'Descarga inválida', 400
 
-    braille_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
-    if not os.path.exists(braille_file):
-        home_temp = os.path.join(os.path.expanduser('~'), 'temp_files', f'{download_id}.txt')
-        if os.path.exists(home_temp):
-            braille_file = home_temp
+    brf_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.brf')
+    if not os.path.exists(brf_file):
+        # Generar a partir del .txt si no existe el archivo .brf previo
+        braille_file = os.path.join(TEMP_FILES_DIR, f'{download_id}.txt')
+        if not os.path.exists(braille_file):
+            home_temp = os.path.join(os.path.expanduser('~'), 'temp_files', f'{download_id}.txt')
+            if os.path.exists(home_temp):
+                braille_file = home_temp
 
-    if not os.path.exists(braille_file):
-        return 'Archivo Braille no encontrado', 404
+        if not os.path.exists(braille_file):
+            return 'Archivo Braille no encontrado', 404
 
-    # Enviar directamente el archivo de texto pero con extensión .brf
-    return send_file(braille_file, as_attachment=True, download_name=f'{original_filename}.brf')
+        with open(braille_file, 'r', encoding='utf-8') as f:
+            u_text = f.read()
+        brf_content = braille_doc.unicode_to_braille_ascii(u_text)
+        with open(brf_file, 'w', encoding='utf-8') as f:
+            f.write(brf_content)
+
+    return send_file(
+        brf_file,
+        as_attachment=True,
+        download_name=f'{original_filename}.brf',
+        mimetype='text/plain'
+    )
 
 import re
 

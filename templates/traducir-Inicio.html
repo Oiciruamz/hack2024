@@ -3,144 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traducir PDF a Braille — Letras Inclusivas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">  
     <link rel="stylesheet" href="{{ url_for('static', filename='css/header_inicio.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">  
-    <title>Traducir PDF a Braille</title>
-    <style>
-
-        .container {
-            text-align: center;
-            margin-top: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        h1 {
-            color: #000;
-            font-weight: 700;
-            font-size: 2em;
-        }
-
-        .upload-btn {
-            display: block;
-            /* width: 500px; */
-            background-color: #6A36B3;
-            color: white;
-            padding: 20px 40px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1.2em;
-        }
-
-        .upload-btn:hover {
-            background-color: #55299A;
-        }
-
-        .dropzone {
-            width: 500px;
-            border: 2px dashed #6A36B3;
-            padding: 50px;
-            margin-top: 20px;
-            border-radius: 10px;
-            color: #6A36B3;
-            cursor: pointer;
-        }
-
-        .dropzone:hover {
-            background-color: #EDE7F6;
-        }
-
-        #loading-spinner {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 50px;
-        }
-
-        .loader {
-            border: 16px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 16px solid #6A36B3;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 1100px) {
-            .container {
-                margin-top: 20px;
-            }
-
-            h1 {
-                font-size: 1.5em;
-            }
-
-            .upload-btn {
-                padding: 15px 30px;
-                font-size: 1em;
-            }
-
-            /* Ajustar el tamaño de la zona de arrastre */
-            .dropzone {
-                width: 100%;
-                padding: 30px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .upload-btn {
-                padding: 10px 20px;
-                font-size: 0.9em;
-            }
-
-            h1 {
-                font-size: 1.2em;
-            }
-        }
-
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editor_braille.css') }}">
 </head>
 <body>
 
     {% include 'header.html' %}
 
-    <main class="container" id="form-content">
-        <h1>Traducir archivo PDF a código Braille</h1>
-        <p>Ingresa el archivo que deseas traducir</p>
-
-        <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
-            <input style="display: none;" id="subir" class="upload-btn" type="file" name="pdf_file" accept=".pdf,application/pdf" required aria-label="Seleccionar archivo PDF para traducir">
-            <label for="subir" class="upload-btn" tabindex="0" role="button" aria-label="Selecciona el archivo PDF desde tu dispositivo">Selecciona el archivo</label>
-        </form>
-
-        <div class="dropzone" id="dropzone" tabindex="0" role="region" aria-label="Zona para arrastrar y soltar archivo PDF">
-            ó arrastra tu archivo aquí
+    <main class="eb-wrap" id="main-content">
+        <!-- Encabezado y Stepper -->
+        <div class="eb-main-heading">
+            <div>
+                <div class="eb-eyebrow">Herramientas de accesibilidad</div>
+                <h1>Traduce un documento a braille</h1>
+                <p class="eb-subtitle">Convierte tus documentos a formatos accesibles en unos pasos.</p>
+            </div>
+            <div class="eb-stepper" role="navigation" aria-label="Progreso de traducción">
+                <div class="eb-step active" aria-current="step">
+                    <span class="eb-num" aria-hidden="true">1</span>
+                    <span>Subir archivo</span>
+                </div>
+                <span class="eb-dash" aria-hidden="true"></span>
+                <div class="eb-step">
+                    <span class="eb-num" aria-hidden="true">2</span>
+                    <span>Revisar</span>
+                </div>
+                <span class="eb-dash" aria-hidden="true"></span>
+                <div class="eb-step">
+                    <span class="eb-num" aria-hidden="true">3</span>
+                    <span>Descargar</span>
+                </div>
+            </div>
         </div>
-        <div id="file-error" class="text-danger mt-3" style="display:none; font-weight: 500;" role="alert"></div>
-    </main>
 
-    <div id="loading-spinner" role="status" aria-live="polite">
-        <div class="loader" aria-hidden="true"></div>
-        <h2>Traduciendo el archivo, por favor espera...</h2>
-    </div>
+        <!-- Tarjeta de subida -->
+        <section class="eb-panel eb-upload-shell eb-upload-panel" id="upload-panel">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Sube el documento que quieres traducir</h2>
+            <p class="eb-subtitle" style="margin-top: 6px;">El reconocimiento del texto inicia cuando seleccionas un archivo PDF.</p>
+
+            <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <div class="eb-drop" id="dropzone" tabindex="0" role="region" aria-label="Zona para arrastrar y soltar archivo PDF">
+                    <strong>Selecciona tu archivo PDF</strong>
+                    <small>Formato admitido: PDF.</small>
+                    <input style="display: none;" id="subir" type="file" name="pdf_file" accept=".pdf,application/pdf" required aria-label="Seleccionar archivo PDF para traducir">
+                    <label for="subir" class="eb-btn eb-btn-primary" tabindex="0" role="button" aria-label="Selecciona el archivo PDF desde tu dispositivo">
+                        Seleccionar archivo
+                    </label>
+                    <div id="fileChosen" style="margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--eb-primary);" role="status"></div>
+                </div>
+
+                <!-- Checkbox accesible: opt-in para revisar y editar antes de descargar -->
+                <label class="eb-checkbox-row" for="allowReview" tabindex="0">
+                    <input id="allowReview" type="checkbox" name="allow_review" value="1">
+                    <span>
+                        <strong>Revisar y editar antes de descargar</strong>
+                        <small>Corrige el texto detectado y revisa su traducción braille antes de generar los archivos.</small>
+                    </span>
+                </label>
+            </form>
+
+            <div id="file-error" style="display:none; color: #b71c1c; background: #ffebee; border: 1px solid #ffcdd2; padding: 12px; border-radius: 8px; margin-top: 14px; font-size: 13.5px;" role="alert"></div>
+
+            <div class="eb-actions">
+                <span style="font-size: 12.5px; color: var(--eb-muted);" id="uploadStatus" role="status">Puedes probar la interfaz sin usar un PDF real.</span>
+                <form action="/demo-review" method="POST" style="margin:0;">
+                    <button type="submit" class="eb-btn" id="tryDemo">Probar con texto de ejemplo</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Indicador de carga accesible -->
+        <section class="eb-panel eb-upload-shell eb-spinner-container" id="loading-spinner" role="status" aria-live="polite">
+            <div class="eb-loader" aria-hidden="true"></div>
+            <h2 id="loading-title" style="margin: 0 0 8px; font-size: 20px;">Procesando documento con Mistral OCR...</h2>
+            <p class="eb-subtitle">Extrayendo texto y preparando contenido accesible, por favor espera.</p>
+        </section>
+    </main>
 
     <script>
         const fileInput = document.getElementById('subir');
         const form = document.getElementById('upload-form');
-        const formContent = document.getElementById('form-content');
+        const uploadPanel = document.getElementById('upload-panel');
         const loadingSpinner = document.getElementById('loading-spinner');
+        const loadingTitle = document.getElementById('loading-title');
         const dropzone = document.getElementById('dropzone');
         const fileError = document.getElementById('file-error');
         const fileLabel = document.querySelector('label[for="subir"]');
+        const checkboxLabel = document.querySelector('label[for="allowReview"]');
+        const allowReviewCheckbox = document.getElementById('allowReview');
+        const fileChosen = document.getElementById('fileChosen');
+
+        // Soporte de accesibilidad por teclado para el label del checkbox
+        if (checkboxLabel && allowReviewCheckbox) {
+            checkboxLabel.addEventListener('keydown', function(e) {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    allowReviewCheckbox.checked = !allowReviewCheckbox.checked;
+                }
+            });
+        }
 
         function procesarArchivo(file) {
             if (!file) return;
@@ -150,32 +115,44 @@
                 return;
             }
             fileError.style.display = 'none';
-            formContent.style.display = 'none';
+            if (fileChosen) {
+                fileChosen.textContent = 'Archivo seleccionado: ' + file.name;
+            }
+
+            if (allowReviewCheckbox && allowReviewCheckbox.checked) {
+                loadingTitle.textContent = 'Extrayendo contenido con OCR para revisión…';
+            } else {
+                loadingTitle.textContent = 'Traduciendo el archivo a Braille, por favor espera…';
+            }
+
+            uploadPanel.style.display = 'none';
             loadingSpinner.style.display = 'flex';
             form.submit();
         }
 
-        // Evento de selección de archivo normal
+        // Selección normal de archivo
         fileInput.addEventListener('change', function() {
             if (fileInput.files.length > 0) {
                 procesarArchivo(fileInput.files[0]);
             }
         });
 
-        // Soporte de accesibilidad por teclado para el label
-        fileLabel.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                fileInput.click();
-            }
-        });
+        // Soporte teclado para el botón de subida
+        if (fileLabel) {
+            fileLabel.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInput.click();
+                }
+            });
+        }
 
-        // Drag & Drop
+        // Drag & Drop con feedback visual
         ['dragenter', 'dragover'].forEach(eventName => {
             dropzone.addEventListener(eventName, (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                dropzone.style.backgroundColor = '#EDE7F6';
+                dropzone.classList.add('dragover');
             });
         });
 
@@ -183,7 +160,7 @@
             dropzone.addEventListener(eventName, (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                dropzone.style.backgroundColor = '';
+                dropzone.classList.remove('dragover');
             });
         });
 

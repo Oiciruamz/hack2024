@@ -85,7 +85,7 @@ def _format_table_accessible(table_cells: List[List[str]]) -> List[str]:
         lines.append(f"Fila {row_idx}:")
         for col_idx, header in enumerate(headers):
             val = row[col_idx].strip() if col_idx < len(row) and row[col_idx] else ""
-            clean_val = " ".join(val.split()) if val else "(vacio)"
+            clean_val = clean_markdown_and_invisibles(" ".join(val.split())) if val else "(vacio)"
             lines.append(f"- {header}: {clean_val}")
 
     lines.append("[FIN DE TABLA]")
@@ -135,7 +135,9 @@ def markdown_to_lines(markdown: str) -> List[str]:
         if stripped:
             stripped = re.sub(r"^#{1,6}\s+", "", stripped)
             stripped = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", stripped)
-            result.append(stripped)
+            stripped = clean_markdown_and_invisibles(stripped)
+            if stripped:
+                result.append(stripped)
         else:
             result.append("")
         i += 1
@@ -186,13 +188,8 @@ def _page_to_lines(page) -> List[str]:
     return lines
 
 
-def extract_text_from_pdf(pdf_path: str) -> List[str]:
-    """
-    Extrae texto de un PDF con Mistral OCR (mistral-ocr-latest).
-
-    Returns:
-        Lista de líneas de texto (mismo contrato que count_text_lines).
-    """
+def extract_ocr_pages(pdf_path: str) -> List[Any]:
+    """Llama a la API de Mistral OCR y devuelve la lista de páginas crudas."""
     api_key = _require_api_key()
     document_url = _pdf_to_data_url(pdf_path)
 
@@ -250,6 +247,18 @@ def extract_text_from_pdf(pdf_path: str) -> List[str]:
             raise MistralOCRError(f"Error al llamar a Mistral OCR: {last_error}")
         raise MistralOCRError("Mistral OCR no devolvió páginas de texto.")
 
+    return pages
+
+
+def extract_text_from_pdf(pdf_path: str) -> List[str]:
+    """
+    Extrae texto de un PDF con Mistral OCR (mistral-ocr-latest).
+
+    Returns:
+        Lista de líneas de texto (mismo contrato que count_text_lines).
+    """
+    pages = extract_ocr_pages(pdf_path)
+
     all_lines: List[str] = []
     for page in pages:
         page_lines = _page_to_lines(page)
@@ -262,6 +271,24 @@ def extract_text_from_pdf(pdf_path: str) -> List[str]:
         raise MistralOCRError("Mistral OCR no extrajo texto del documento.")
 
     return all_lines
+
+
+def extract_structured_document(pdf_path: str, filename: str) -> Dict[str, Any]:
+    """
+    Extrae contenido estructurado de un PDF (páginas, bloques, tablas)
+    para el editor de revisión braille.
+    """
+    from app.braille_document import build_document_structure
+
+    pages = extract_ocr_pages(pdf_path)
+    processed_pages: List[str] = []
+    for page in pages:
+        page_lines = _page_to_lines(page)
+        clean_page_text = clean_markdown_and_invisibles("\n".join(page_lines))
+        processed_pages.append(clean_page_text)
+
+    doc = build_document_structure(processed_pages, filename=filename)
+    return doc
 
 
 def clean_markdown_and_invisibles(text: str) -> str:
@@ -283,12 +310,16 @@ def clean_markdown_and_invisibles(text: str) -> str:
 
     # 3. Limpiar Markdown visual
     # Negrita: **palabra** o __palabra__
-    text = re.sub(r"\*\*([^*]+?)\*\*", r"\1", text)
-    text = re.sub(r"__([^_]+?)__", r"\1", text)
+    while re.search(r"\*\*([^*]+?)\*\*", text):
+        text = re.sub(r"\*\*([^*]+?)\*\*", r"\1", text)
+    while re.search(r"__([^_]+?)__", text):
+        text = re.sub(r"__([^_]+?)__", r"\1", text)
 
     # Cursiva: *palabra* o _palabra_
-    text = re.sub(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", r"\1", text)
-    text = re.sub(r"(?<!_)_([^_\n]+?)_(?!_)", r"\1", text)
+    while re.search(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", text):
+        text = re.sub(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", r"\1", text)
+    while re.search(r"(?<!_)_([^_\n]+?)_(?!_)", text):
+        text = re.sub(r"(?<!_)_([^_\n]+?)_(?!_)", r"\1", text)
 
     # Tachado: ~~palabra~~
     text = re.sub(r"~~([^~]+?)~~", r"\1", text)
@@ -299,7 +330,7 @@ def clean_markdown_and_invisibles(text: str) -> str:
     # Viñetas con asterisco al inicio de línea: '* texto' -> '- texto'
     text = re.sub(r"^\s*\*\s+", "- ", text, flags=re.MULTILINE)
 
-    # Cualquier asterisco residual huérfano
+    # Cualquier asterisco residual huérfano (para que no genere signos de interrogación en Braille)
     text = text.replace("*", "")
 
     # Normalizar espacios múltiples por línea y evitar múltiples líneas vacías consecutivas

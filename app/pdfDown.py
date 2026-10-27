@@ -31,15 +31,20 @@ class PDF(FPDF):
                 if isinstance(self.fonts[k], dict) and 'ttffile' in self.fonts[k]:
                     self.fonts[k]['ttffile'] = font_path
 
+        # Configurar márgenes óptimos para aprovechar toda la hoja de la impresora
+        self.set_left_margin(10)
+        self.set_right_margin(10)
+        self.set_top_margin(10)
+        self.set_auto_page_break(True, margin=10)
+
         # Establecer fuente DejaVu Sans
         self.set_font("DejaVu", size=20)
 
-        # Limpiar texto y saltos vacíos excesivos
-        clean_text = text.strip() if text else ""
-        clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
+        # Eliminar todos los saltos de renglón para que el braille esté todo junto
+        # aprovechando al máximo toda la hoja de la impresora
+        clean_text = " ".join(text.split()) if text else ""
 
-        # Agregar texto con alineación a la izquierda ('L') para evitar que se justifique
-        # y genere espacios en blanco gigantes entre palabras
+        # Agregar texto continuo con alineación a la izquierda ('L')
         self.multi_cell(0, 10, clean_text, align="L")
 
         # Guardar el PDF

@@ -88,7 +88,7 @@ def char_to_braille(char):
         return char
     elif char == "\n":
         return "\n"
-    elif char in ("\u200b", "\ufeff", "\u00ad", "\r"):
+    elif char in ("\u200b", "\ufeff", "\u00ad", "\r", "*", "`", "~", "^"):
         return ""
     elif char == "\u00a0":
         return " "
@@ -153,6 +153,15 @@ def translate(string):
     # Convert alphabetic text to braille, preserving line breaks.
     if not string:
         return ""
+    import re
+    # Limpiar formato Markdown visual (negritas, cursivas, código) para que no genere '?'
+    string = re.sub(r"\*\*([^*]+?)\*\*", r"\1", string)
+    string = re.sub(r"__([^_]+?)__", r"\1", string)
+    string = re.sub(r"\*([^*\n]+?)\*", r"\1", string)
+    string = re.sub(r"_([^_\n]+?)_", r"\1", string)
+    string = re.sub(r"~~([^~]+?)~~", r"\1", string)
+    string = re.sub(r"`([^`]+?)`", r"\1", string)
+    string = string.replace("*", "").replace("`", "")
     lines = string.split("\n")
     return "\n".join(translate_line(line) for line in lines)
 

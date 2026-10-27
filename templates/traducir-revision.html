@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisa tu traducción — Letras Inclusivas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header_inicio.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editor_braille.css') }}">
+</head>
+<body>
+
+    {% include 'header.html' %}
+
+    <main class="eb-wrap" id="main-content">
+        <!-- Encabezado y Stepper de navegación -->
+        <div class="eb-main-heading">
+            <div>
+                <div class="eb-eyebrow">Herramientas de accesibilidad</div>
+                <h1 id="pageTitle">Revisa tu traducción</h1>
+                <p class="eb-subtitle">Edita el texto extraído y observa la representación en braille en tiempo real.</p>
+            </div>
+            <div class="eb-stepper" role="navigation" aria-label="Progreso de traducción">
+                <div class="eb-step completed">
+                    <span class="eb-num" aria-hidden="true">✓</span>
+                    <span>Subir archivo</span>
+                </div>
+                <span class="eb-dash" aria-hidden="true"></span>
+                <div class="eb-step active" aria-current="step">
+                    <span class="eb-num" aria-hidden="true">2</span>
+                    <span>Revisar</span>
+                </div>
+                <span class="eb-dash" aria-hidden="true"></span>
+                <div class="eb-step">
+                    <span class="eb-num" aria-hidden="true">3</span>
+                    <span>Descargar</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de documento y controles de estado -->
+        <section class="eb-docbar" aria-label="Información del documento en revisión">
+            <div class="eb-docname">
+                <div class="eb-pdf-icon" aria-hidden="true">PDF</div>
+                <div>
+                    <strong id="filename">{{ doc.filename }}</strong>
+                    <small>OCR finalizado · {{ doc.total_pages }} página{{ 's' if doc.total_pages > 1 else '' }}</small>
+                </div>
+            </div>
+
+            <div class="eb-doc-actions">
+                {% if doc.total_pages > 1 %}
+                <div class="eb-pagination-controls" aria-label="Navegación de páginas">
+                    <button type="button" id="prevPageBtn" class="eb-btn eb-btn-small" aria-label="Página anterior" disabled>← Anterior</button>
+                    <span id="pageIndicator" style="font-weight:600; padding: 0 4px;">Página 1 de {{ doc.total_pages }}</span>
+                    <button type="button" id="nextPageBtn" class="eb-btn eb-btn-small" aria-label="Página siguiente">Siguiente →</button>
+                </div>
+                {% endif %}
+
+                <div class="eb-status-tag" role="status" aria-live="polite">
+                    <span class="eb-dot" id="saveDot" aria-hidden="true"></span>
+                    <span id="saveStatus">Guardado</span>
+                </div>
+
+                <button type="button" id="btnRestaurar" class="eb-btn eb-btn-small" title="Vuelve al texto extraído por OCR descartando correcciones de esta página">
+                    Restaurar OCR
+                </button>
+            </div>
+        </section>
+
+        <!-- Editor Dividido: Texto OCR (Izquierda) vs Vista Braille (Derecha) -->
+        <div class="eb-editgrid">
+            <!-- Panel Izquierdo: Texto extraído editable -->
+            <article class="eb-panel eb-editor-panel" aria-label="Panel de texto extraído editable">
+                <div class="eb-panel-head">
+                    <h2>
+                        <span class="eb-pane-icon" aria-hidden="true">✎</span>
+                        <span>Texto extraído del PDF</span>
+                    </h2>
+                    <span class="eb-help">Editable</span>
+                </div>
+                <div class="eb-editbody">
+                    <label for="ocrText" class="eb-help" style="margin-bottom: 10px; display:block;">
+                        Corrige el contenido detectado, signos o acentos. Los cambios actualizarán la vista braille a la derecha.
+                    </label>
+                    <textarea id="ocrText" spellcheck="true" aria-label="Texto extraído por OCR editable" placeholder="Escribe o corrige el texto aquí...">{{ doc.pages[0].text if doc.pages else '' }}</textarea>
+                </div>
+                <div class="eb-panel-foot">
+                    <span id="wordCount">0 palabras</span>
+                    <span id="charCount">0 caracteres</span>
+                </div>
+            </article>
+
+            <!-- Panel Derecho: Vista previa braille sincronizada -->
+            <article class="eb-panel eb-editor-panel" aria-label="Panel de vista previa braille">
+                <div class="eb-panel-head">
+                    <h2>
+                        <span class="eb-pane-icon" aria-hidden="true">⠿</span>
+                        <span>Vista previa braille</span>
+                    </h2>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="eb-help" id="brailleStatus" role="status" aria-live="polite">Al día</span>
+                        <button type="button" id="retryBrailleBtn" class="eb-btn eb-btn-small" style="display:none;" aria-label="Reintentar traducción braille">Reintentar</button>
+                    </div>
+                </div>
+                <div class="eb-braille-body">
+                    <div id="braillePreview" class="eb-braille-preview" role="region" aria-label="Representación Braille del texto" tabindex="0">{{ initial_braille or '⠿' }}</div>
+                </div>
+                <div class="eb-preview-desc">
+                    <strong>Nota técnica:</strong> Vista visual en Braille Unicode (U+2800) para lectura en pantalla. El archivo <code>.brf</code> final se genera con la codificación internacional <strong>Braille ASCII</strong> requerida por impresoras y líneas braille.
+                </div>
+                <div class="eb-panel-foot">
+                    <span>Motor de traducción activo</span>
+                    <span>Español Grado 1</span>
+                </div>
+            </article>
+        </div>
+
+        <!-- Pie y Botones de acción -->
+        <div class="eb-previewfoot">
+            <div class="eb-hint">
+                <span aria-hidden="true" style="font-size: 18px;">ⓘ</span>
+                <span>
+                    <strong>Traducción sincronizada:</strong> Cualquier corrección en el texto actualiza el braille de forma continua. Al pulsar <strong>Finalizar revisión</strong>, tanto el PDF como el archivo BRF se generarán a partir de esta misma versión confirmada.
+                </span>
+            </div>
+
+            <div class="eb-button-row">
+                <a href="/traducir-archivo" class="eb-btn" id="btnVolver">← Volver</a>
+                <button type="button" class="eb-btn eb-btn-primary" id="btnFinalizar">Finalizar revisión →</button>
+            </div>
+        </div>
+
+        <!-- Formulario oculto para enviar la versión confirmada al servidor -->
+        <form id="finalizeForm" action="/finalizar-revision/{{ review_id }}" method="POST" style="display:none;">
+            <input type="hidden" name="page_index" id="formPageIndex" value="0">
+            <input type="hidden" name="current_page_text" id="formPageText" value="">
+        </form>
+    </main>
+
+    {% include 'footer.html' %}
+
+    <script>
+        window.__BRAILLE_EDITOR_CONFIG__ = {
+            reviewId: {{ review_id | tojson }},
+            pages: {{ doc.pages | tojson }}
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/editor_braille.js') }}"></script>
+</body>
+</html>

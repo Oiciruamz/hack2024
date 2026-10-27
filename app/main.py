@@ -21,7 +21,15 @@ def user_braille(x):
     return a
 
 def user_text(x):
-    a =alphaToBraille.translate(x)
+    if not x:
+        return ""
+    import re
+    clean = re.sub(r"\*\*([^*]+?)\*\*", r"\1", str(x))
+    clean = re.sub(r"__([^_]+?)__", r"\1", clean)
+    clean = re.sub(r"\*([^*\n]+?)\*", r"\1", clean)
+    clean = re.sub(r"_([^_\n]+?)_", r"\1", clean)
+    clean = clean.replace("*", "").replace("`", "")
+    a = alphaToBraille.translate(clean)
     return a
 
 

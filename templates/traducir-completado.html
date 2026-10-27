@@ -3,125 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu documento está listo — Letras Inclusivas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">  
     <link rel="stylesheet" href="{{ url_for('static', filename='css/header_inicio.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">  
-    <title>Resultado de Braille</title>
-    <style>
-        .container {
-            text-align: center;
-            margin-top: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        h1 {
-            color: #000;
-            font-weight: 700;
-            font-size: 2em;
-            margin-bottom: 50px;
-        }
-
-        .container a {
-            width: 250px;
-            padding: 30px;
-            font-size: medium;
-            border: 1px solid #6A36B3;
-            border-radius: 20px;
-            margin-bottom: 40px;
-            text-decoration: none;
-        }
-
-        .descargar {
-            cursor: pointer;
-            padding: 30px;
-            width: 250px;
-            border-radius: 20px;
-            border: 1px solid #6A36B3;
-            background-color: #6A36B3;
-            color: #fff;
-            font-weight: bold;
-        }
-
-        .descargar:hover {
-            background-color: #55299A;
-        }
-
-        .subir {
-            background-color: #d6bcf8;
-            font-size: medium;
-            font-weight: 600;
-        }
-
-        .subir:hover {
-            background-color: #bfa6f0;
-        }
-
-        .subir img {
-            width: 12px;
-        }
-
-        .descargar img {
-            width: 15px;
-        }
-
-        @media (max-width: 1100px) {
-            .container {
-                margin-top: 20px;
-            }
-
-            h1 {
-                font-size: 1.5em;
-            }
-
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.2em;
-            }
-        }
-
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editor_braille.css') }}">
 </head>
 <body>
 
     {% include 'header.html' %}
 
-    <div class="container">
-        <h1>Archivo PDF traducido a código Braille</h1>
-
-        <div style="display: flex; gap: 20px; justify-content: center;">
-            <form action="/download_braille" method="POST">
-                <input type="hidden" name="download_id" value="{{download_id}}">
-                <input type="hidden" name="original_filename" value="{{original_filename}}">
-                <button type="submit" class="descargar" style="font-size: medium; background-color: #6A36B3;">
-                    <img src="{{ url_for('static', filename='images/descargar.png') }}" style="filter: brightness(0) invert(1);" alt="Icono de descargar">
-                    Descargar en PDF
-                </button>
-            </form>
-
-            <form action="/download_brf" method="POST">
-                <input type="hidden" name="download_id" value="{{download_id}}">
-                <input type="hidden" name="original_filename" value="{{original_filename}}">
-                <button type="submit" class="descargar" style="font-size: medium; background-color: #2b292d;">
-                    <img src="{{ url_for('static', filename='images/descargar.png') }}" style="filter: brightness(0) invert(1);" alt="Icono de descargar">
-                    Descargar en BRF
-                </button>
-            </form>
+    <main class="eb-wrap" id="main-content">
+        <!-- Encabezado y Stepper -->
+        <div class="eb-main-heading">
+            <div>
+                <div class="eb-eyebrow">Herramientas de accesibilidad</div>
+                <h1>Tu documento está listo</h1>
+                <p class="eb-subtitle">Descarga ambos formatos accesibles a continuación.</p>
+            </div>
+            <div class="eb-stepper" role="navigation" aria-label="Progreso de traducción">
+                <div class="eb-step completed">
+                    <span class="eb-num" aria-hidden="true">✓</span>
+                    <span>Subir archivo</span>
+                </div>
+                <span class="eb-dash" aria-hidden="true"></span>
+                <div class="eb-step completed">
+                    <span class="eb-num" aria-hidden="true">✓</span>
+                    <span>Revisar</span>
+                </div>
+                <span class="eb-dash" aria-hidden="true"></span>
+                <div class="eb-step active" aria-current="step">
+                    <span class="eb-num" aria-hidden="true">3</span>
+                    <span>Descargar</span>
+                </div>
+            </div>
         </div>
 
-        <!-- <p style="font-size: 20px; font-weight: bold; margin-bottom: 20px;">ó</p>
+        <!-- Tarjeta de Descargas -->
+        <section class="eb-panel eb-summary" aria-label="Opciones de descarga de documentos accesibles">
+            <div class="eb-success-badge" aria-hidden="true">✓</div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 700;">Revisión completada</h2>
+            <p class="eb-subtitle" style="margin-top: 6px;">
+                Los archivos finales se han generado a partir de la versión confirmada del documento.
+            </p>
 
-        <a class="subir" href="/" style="font-size: medium;">
-            <img src="{{ url_for('static', filename='images/iconotransferir.svg') }}" alt="Icono de subir">
-            Subir Archivo
-        </a> -->
+            <div class="eb-download-grid">
+                <!-- Tarjeta PDF -->
+                <div class="eb-download-card">
+                    <div>
+                        <strong>Documento PDF</strong>
+                        <small>Archivo generado a partir del contenido revisado con tipografía braille accesible.</small>
+                    </div>
+                    <form action="/download_braille" method="POST" style="margin:0;">
+                        <input type="hidden" name="download_id" value="{{ download_id }}">
+                        <input type="hidden" name="original_filename" value="{{ original_filename }}">
+                        <button type="submit" class="eb-btn eb-btn-primary" style="width: 100%;">
+                            Descargar PDF
+                        </button>
+                    </form>
+                </div>
 
-        <!-- <p>{{braille}}</p> Solo estaba comprobando si recibia el braille -->
-    </div>
+                <!-- Tarjeta BRF -->
+                <div class="eb-download-card">
+                    <div>
+                        <strong>Documento braille (.brf)</strong>
+                        <small>Traducción normativa codificada en Braille ASCII estándar para impresoras y pantallas braille.</small>
+                    </div>
+                    <form action="/download_brf" method="POST" style="margin:0;">
+                        <input type="hidden" name="download_id" value="{{ download_id }}">
+                        <input type="hidden" name="original_filename" value="{{ original_filename }}">
+                        <button type="submit" class="eb-btn eb-btn-dark" style="width: 100%;">
+                            Descargar BRF
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Botones de navegación adicional -->
+            <div class="eb-actions" style="margin-top: 10px;">
+                {% if review_id %}
+                <a href="/revisar/{{ review_id }}" class="eb-btn" id="backEditor">← Editar de nuevo</a>
+                {% else %}
+                <span></span>
+                {% endif %}
+                <a href="/traducir-archivo" class="eb-btn eb-btn-primary">Traducir otro archivo</a>
+            </div>
+        </section>
+    </main>
 
     {% include 'footer.html' %}
 </body>
