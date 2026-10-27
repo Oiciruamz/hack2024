@@ -20,6 +20,16 @@ const inputText = document.getElementById('input-text');
 // al backend registrar libros de Google Books (IDs 'gb_...').
 let libroSeleccionado = null;
 
+// Si la sesión expiró, el backend responde 401: mandar al login y volver aquí.
+function redirigirSiNoAutenticado(response) {
+    if (response.status === 401) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.assign('/login?next=' + next);
+        return true;
+    }
+    return false;
+}
+
 async function obtenerListas() {
     try {
         const response = await fetch('/listas', {
@@ -29,6 +39,7 @@ async function obtenerListas() {
             },
         });
 
+        if (redirigirSiNoAutenticado(response)) return [];
         if (!response.ok) {
             throw new Error('Error en la red');
         }
@@ -57,6 +68,7 @@ async function agregarLibroALista(libro, listaId) {
             })
         });
 
+        if (redirigirSiNoAutenticado(response)) return;
         const result = await response.json();
 
         if (response.ok) {
@@ -79,6 +91,7 @@ async function crearNuevaLista(nombre) {
         },
         body: JSON.stringify({ nombre: nombre })
     });
+    if (redirigirSiNoAutenticado(response)) return { success: false, message: 'Debes iniciar sesión.' };
     return await response.json();
 }
 

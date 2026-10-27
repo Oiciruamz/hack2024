@@ -36,12 +36,16 @@ ocr_mistral = importlib.util.module_from_spec(spec_ocr)
 sys.modules["app.ocr_mistral"] = ocr_mistral
 spec_ocr.loader.exec_module(ocr_mistral)
 
+spec_fb = importlib.util.spec_from_file_location("app.firebase_service", PACKAGE_DIR / "firebase_service.py")
+fb = importlib.util.module_from_spec(spec_fb)
+sys.modules["app.firebase_service"] = fb
+spec_fb.loader.exec_module(fb)
+
 TEMP_FILES_DIR = str(PROJECT_ROOT / "temp_files")
 os.makedirs(TEMP_FILES_DIR, exist_ok=True)
 
-from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify
+from flask import Flask, render_template, request, send_file, redirect, url_for, jsonify, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import check_password_hash, generate_password_hash
 
 GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes"
 GOOGLE_BOOKS_KEY = os.getenv('GOOGLE_BOOKS_API_KEY', 'AIzaSyAAUx82Bb6dJvUpJ2dZnWSNsejemaXhOY8')
@@ -233,11 +237,23 @@ def obtener_libro(libro_id) -> Optional[Dict]:
     return next((libro for libro in libros if libro['id'] == lid), None)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'jeje_lol'  # Cambia esto por una clave secreta real
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or 'dev-inseguro-define-SECRET_KEY-en-.env'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+login_manager.login_message = None
+
+# Configuración pública del Firebase JS SDK (no es secreta, identifica el proyecto).
+FIREBASE_WEB_CONFIG = {
+    'apiKey': os.getenv('FIREBASE_API_KEY', ''),
+    'authDomain': os.getenv('FIREBASE_AUTH_DOMAIN', ''),
+    'projectId': os.getenv('FIREBASE_PROJECT_ID', ''),
+    'appId': os.getenv('FIREBASE_APP_ID', ''),
+}
+FIREBASE_WEB_LISTO = all(FIREBASE_WEB_CONFIG.values())
 
 
 @app.context_processor
@@ -245,17 +261,47 @@ def inyectar_generos_catalogo():
     """Disponibiliza los géneros del dropdown "Catálogo" en todas las plantillas."""
     return {'generos_catalogo': GENEROS_CATALOGO}
 
+
+@app.context_processor
+def inyectar_firebase():
+    return {'firebase_config': FIREBASE_WEB_CONFIG, 'firebase_web_listo': FIREBASE_WEB_LISTO}
+
+
 class User(UserMixin):
-    def __init__(self, id, email, password_hash):
-        self.id = id
+    """Usuario autenticado con Firebase. `id` es el UID de Firebase."""
+    def __init__(self, uid, email, nombre=''):
+        self.id = uid
         self.email = email
-        self.password_hash = password_hash
-        self.saved_books = []  
+        self.nombre = nombre or (email.split('@')[0] if email else 'Usuario')
 
 
-users = {
-    'usuario@ejemplo.com': User('1', 'usuario@ejemplo.com', generate_password_hash('contraseña'))
-}
+def _es_peticion_api() -> bool:
+    """True si la petición es un fetch/JSON (para responder 401/503 en JSON)."""
+    return request.is_json or request.accept_mimetypes.best == 'application/json' \
+        or request.path in ('/listas', '/crear_lista', '/agregar_libro', '/eliminar_libro', '/eliminar_lista', '/sesion')
+
+
+@login_manager.unauthorized_handler
+def no_autorizado():
+    if _es_peticion_api():
+        return jsonify({'success': False, 'message': 'Debes iniciar sesión.', 'login_url': url_for('login')}), 401
+    return redirect(url_for('login', next=request.full_path.rstrip('?')))
+
+
+@app.errorhandler(fb.FirebaseNoConfigurado)
+def firebase_no_configurado(exc):
+    mensaje = 'El servicio de cuentas no está configurado todavía.'
+    app.logger.warning("[Firebase] %s", exc)
+    if _es_peticion_api():
+        return jsonify({'success': False, 'message': mensaje}), 503
+    return mensaje, 503
+
+
+def _url_siguiente_segura(destino: Optional[str]) -> str:
+    """Evita open redirects: solo rutas relativas internas."""
+    if destino and destino.startswith('/') and not destino.startswith('//') and '\\' not in destino:
+        return destino
+    return url_for('inicio')
 
 
 libros = [
@@ -288,37 +334,104 @@ libros = [
 
 @login_manager.user_loader
 def load_user(user_id):
-    for user in users.values():
-        if user.id == user_id:
-            return user
-    return None
+    # Usa los datos cacheados en la sesión para no consultar Firestore en cada request
+    datos = session.get('usuario')
+    if datos and datos.get('uid') == user_id:
+        return User(datos['uid'], datos.get('email', ''), datos.get('nombre', ''))
+    # Respaldo (p. ej. cookie "remember me" tras expirar la sesión)
+    try:
+        datos = fb.obtener_usuario(user_id)
+    except fb.FirebaseNoConfigurado:
+        return None
+    if not datos:
+        return None
+    session['usuario'] = datos
+    return User(datos['uid'], datos.get('email', ''), datos.get('nombre', ''))
 
-@app.route('/login', methods=['GET', 'POST'])
+
+def _error_config_visible() -> Optional[str]:
+    """Detalle de configuración de Firebase: completo en debug, genérico en producción."""
+    error = fb.error_configuracion()
+    if not error:
+        return None
+    return error if app.debug else 'El servicio de cuentas no está disponible en este momento.'
+
+
+@app.route('/login')
 def login():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        password = request.form.get('password', '')
-        user = users.get(email)
-        if user and check_password_hash(user.password_hash, password):
-            login_user(user)
-            return redirect(url_for('inicio'))
-        # SEG-001: Error login para contraseña incorrecta o usuario inexistente
-        return render_template('login.html', error='Error login'), 401
-    return render_template('login.html')
+    if current_user.is_authenticated:
+        return redirect(_url_siguiente_segura(request.args.get('next')))
+    return render_template('login.html', siguiente=_url_siguiente_segura(request.args.get('next')),
+                           error_config=_error_config_visible())
+
+
+@app.route('/registro')
+def registro():
+    if current_user.is_authenticated:
+        return redirect(url_for('inicio'))
+    return render_template('registro.html', siguiente=_url_siguiente_segura(request.args.get('next')),
+                           error_config=_error_config_visible())
+
+
+@app.route('/sesion', methods=['POST'])
+def crear_sesion():
+    """Intercambia un ID token de Firebase por una sesión de Flask."""
+    data = request.get_json(silent=True) or {}
+    try:
+        claims = fb.verificar_token(data.get('idToken'))
+    except fb.TokenInvalido:
+        # SEG-001: mismo mensaje genérico para cualquier fallo de autenticación
+        return jsonify({'success': False, 'message': 'Error login'}), 401
+
+    nombre = str(data.get('nombre') or claims.get('name') or '').strip()[:60]
+    usuario = fb.obtener_o_crear_usuario(claims['uid'], claims.get('email', ''), nombre)
+
+    session.clear()
+    session['usuario'] = usuario
+    login_user(User(usuario['uid'], usuario['email'], usuario['nombre']), remember=True)
+    return jsonify({'success': True, 'redirect': _url_siguiente_segura(data.get('next'))}), 200
+
 
 @app.route('/logout')
-@login_required
 def logout():
+    session.clear()
     logout_user()
-    return redirect(url_for('inicio'))
+    resp = make_response(redirect(url_for('inicio')))
+    cookie_name = app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
+    domain = app.config.get('REMEMBER_COOKIE_DOMAIN')
+    path = app.config.get('REMEMBER_COOKIE_PATH', '/')
+    resp.delete_cookie(cookie_name, domain=domain, path=path)
+    return resp
 
-# Almacenamiento en memoria para listas y libros
-listas = {}  # Diccionario para almacenar listas
-contador_listas = 1  # Contador para IDs de listas
+
+def _listas_usuario() -> list:
+    """Listas del usuario actual o [] si no hay sesión / Firebase no responde."""
+    if not current_user.is_authenticated:
+        return []
+    try:
+        return fb.obtener_listas(current_user.id)
+    except Exception as exc:
+        app.logger.warning("[Firebase] No se pudieron obtener las listas: %s", exc)
+        return []
+
+
+def _resolver_libro(libro_id: str, data: Dict) -> Optional[Dict]:
+    """Obtiene {id, titulo, autor, imagen} de un libro local o de Google Books."""
+    libro = obtener_libro(libro_id)
+    if libro:
+        return {k: libro.get(k, '') for k in ('id', 'titulo', 'autor', 'imagen')}
+    if libro_id.startswith('gb_'):
+        # Si el servidor se reinició tras mostrar los resultados, usar los datos del cliente
+        titulo = str(data.get('titulo') or '').strip()
+        imagen = str(data.get('imagen') or '').strip()
+        if titulo and imagen.startswith('http'):
+            return {'id': libro_id, 'titulo': titulo,
+                    'autor': str(data.get('autor') or '').strip(), 'imagen': _a_https(imagen)}
+    return None
 
 @app.route('/crear_lista', methods=['POST'])
+@login_required
 def crear_lista():
-    global contador_listas
     data = request.get_json(silent=True)
     if not data or not isinstance(data, dict):
         return jsonify({'success': False, 'message': 'Error validación', 'error': 'Error validación'}), 400
@@ -333,58 +446,38 @@ def crear_lista():
         return jsonify({'success': False, 'message': 'Error validación', 'error': 'Error validación'}), 400
 
     nombre_lista = str(nombre_lista).strip()
-    # Crear una nueva lista
-    lista_id = contador_listas
-    listas[lista_id] = {
-        'id': lista_id,
-        'nombre': nombre_lista,
-        'libros': []
-    }
-    contador_listas += 1
+    try:
+        lista = fb.crear_lista(current_user.id, nombre_lista)
+    except ValueError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
 
-    return jsonify({'success': True, 'message': 'Lista creada correctamente.', 'lista_id': lista_id}), 201
+    return jsonify({'success': True, 'message': 'Lista creada correctamente.', 'lista_id': lista['id']}), 201
 
 @app.route('/agregar_libro', methods=['POST'])
+@login_required
 def agregar_libro():
     data = request.get_json(silent=True) or {}
-    libro_id = data.get('libro_id')  # Obtener el ID del libro
-    lista_id = data.get('lista_id')  # Puede ser un string, convertirlo a entero
+    libro_id = data.get('libro_id')
+    lista_id = data.get('lista_id')
 
-    # Verifica que el libro y la lista existan
     if not libro_id or not lista_id:
         return jsonify({'success': False, 'message': 'El libro ID y la lista ID son requeridos.'}), 400
 
-    libro_id = str(libro_id).strip()
-
-    # Libros de Google Books: registrarlos si aún no están en memoria
-    # (p. ej. si el servidor se reinició tras mostrar los resultados).
-    if libro_id.startswith('gb_') and libro_id not in libros_externos:
-        titulo = str(data.get('titulo') or '').strip()
-        imagen = str(data.get('imagen') or '').strip()
-        if not titulo or not imagen.startswith('http'):
-            return jsonify({'success': False, 'message': 'No se encontró la información del libro.'}), 404
-        libros_externos[libro_id] = {
-            'id': libro_id,
-            'titulo': titulo,
-            'autor': str(data.get('autor') or '').strip(),
-            'imagen': _a_https(imagen),
-        }
+    libro = _resolver_libro(str(libro_id).strip(), data)
+    if not libro:
+        return jsonify({'success': False, 'message': 'No se encontró la información del libro.'}), 404
 
     try:
-        lista_id = int(lista_id)
+        libros_lista = fb.agregar_libro(current_user.id, str(lista_id), libro)
+    except fb.ListaNoEncontrada:
+        return jsonify({'success': False, 'message': 'La lista no existe.'}), 404
+    except ValueError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
 
-        if lista_id not in listas:
-            return jsonify({'success': False, 'message': f'La lista con ID {lista_id} no existe.'}), 404
-
-        # Agregar el libro a la lista correspondiente
-        listas[lista_id]['libros'].append(libro_id)
-
-        return jsonify({'success': True, 'message': 'Libro agregado correctamente.', 'libros': listas[lista_id]['libros']}), 201
-
-    except ValueError:
-        return jsonify({'success': False, 'message': 'El ID de la lista debe ser un número válido.'}), 400
+    return jsonify({'success': True, 'message': 'Libro agregado correctamente.', 'libros': libros_lista}), 201
 
 @app.route('/eliminar_libro', methods=['POST'])
+@login_required
 def eliminar_libro():
     data = request.get_json(silent=True) or request.form or {}
     libro_id = data.get('libro_id')
@@ -394,93 +487,56 @@ def eliminar_libro():
         return jsonify({'success': False, 'message': 'El libro ID y la lista ID son requeridos.'}), 400
 
     try:
-        lista_id = int(lista_id)
-    except (ValueError, TypeError):
-        return jsonify({'success': False, 'message': 'El ID de la lista debe ser un número válido.'}), 400
+        restantes = fb.eliminar_libro(current_user.id, str(lista_id), str(libro_id))
+    except fb.ListaNoEncontrada:
+        return jsonify({'success': False, 'message': 'La lista no existe.'}), 404
 
-    if lista_id not in listas:
-        return jsonify({'success': False, 'message': f'La lista con ID {lista_id} no existe.'}), 404
-
-    str_libro_id = str(libro_id).strip()
-    libros_actuales = listas[lista_id].get('libros', [])
-
-    nuevos_libros = [x for x in libros_actuales if str(x).strip() != str_libro_id]
-
-    if len(nuevos_libros) == len(libros_actuales):
+    if restantes is None:
         return jsonify({'success': False, 'message': 'El libro no se encuentra en la lista.'}), 404
-
-    listas[lista_id]['libros'] = nuevos_libros
-
-    # Sincronizar listas_con_libros global si está presente
-    global listas_con_libros
-    for l in listas_con_libros:
-        if l.get('id') == lista_id:
-            l['libros'] = [b for b in l.get('libros', []) if str(b.get('id', '')).strip() != str_libro_id]
 
     return jsonify({
         'success': True,
         'message': 'Libro eliminado de la lista correctamente.',
-        'libros': listas[lista_id]['libros'],
-        'total_libros': len(nuevos_libros)
+        'libros': restantes,
+        'total_libros': len(restantes)
     }), 200
 
-@app.route('/listas', methods=['GET'])
-def obtener_listas():
-    return jsonify({'success': True, 'listas': list(listas.values())}), 200
+@app.route('/eliminar_lista', methods=['POST'])
+@login_required
+def eliminar_lista():
+    data = request.get_json(silent=True) or request.form or {}
+    lista_id = data.get('lista_id')
+    if not lista_id:
+        return jsonify({'success': False, 'message': 'La lista ID es requerida.'}), 400
+    try:
+        fb.eliminar_lista(current_user.id, str(lista_id))
+    except fb.ListaNoEncontrada:
+        return jsonify({'success': False, 'message': 'La lista no existe.'}), 404
+    return jsonify({'success': True, 'message': 'Lista eliminada correctamente.'}), 200
 
-listas_con_libros = []  # Inicializa la lista para almacenar listas con libros
+@app.route('/listas', methods=['GET'])
+@login_required
+def obtener_listas():
+    return jsonify({'success': True, 'listas': fb.obtener_listas(current_user.id)}), 200
 
 @app.route('/perfil')
+@login_required
 def perfil():
-
-    global listas_con_libros  # Indica que estás usando la variable global
-
-    listas_con_libros.clear()  # Limpia la lista para evitar duplicados
-
-    # Itera sobre cada lista en el diccionario 'listas'
-    for lista in listas.values():
-        # Obtener los libros correspondientes a los IDs de libros en la lista
-        libros_en_lista = []  # Inicializa una lista vacía para almacenar los libros
-        
-        # Iterar sobre los IDs de libros en la lista
-        for libro_id in lista.get('libros', []):
-            # Resolver el ID tanto en el catálogo local como en libros de Google Books
-            libro_encontrado = obtener_libro(libro_id)
-            if libro_encontrado and libro_encontrado not in libros_en_lista:
-                libros_en_lista.append(libro_encontrado)
-
-        # Agregar la lista con los libros correspondientes
-        listas_con_libros.append({
-            'id': lista['id'],
-            'color': generar_color_pastel(),
-            'nombre': lista['nombre'],  # Nombre de la lista
-            'libros': libros_en_lista     # Libros asociados a esa lista
-        })
-
-    # Renderizar el perfil con las listas que contienen libros
+    listas_con_libros = [
+        {**lista, 'color': generar_color_pastel()}
+        for lista in fb.obtener_listas(current_user.id)
+    ]
     return render_template('perfil.html', listas=listas_con_libros)
 
-@app.route('/lista/<int:lista_id>')
+@app.route('/lista/<lista_id>')
+@login_required
 def lista_individual(lista_id):
-    lista_seleccionada = listas.get(lista_id)
-
-    if lista_seleccionada is None:
+    try:
+        lista_seleccionada = fb.obtener_lista(current_user.id, lista_id)
+    except fb.ListaNoEncontrada:
         return "Lista no encontrada", 404
 
-    # Resolver cada ID guardado (local o de Google Books) sin duplicados,
-    # respetando el orden en que se agregaron
-    libros_filtrados = []
-    ids_vistos = set()
-    for lid in lista_seleccionada.get('libros', []):
-        sid = str(lid).strip()
-        if sid in ids_vistos:
-            continue
-        libro = obtener_libro(sid)
-        if libro:
-            ids_vistos.add(sid)
-            libros_filtrados.append(libro)
-
-    return render_template('lista.html', lista=lista_seleccionada, libros=libros_filtrados)
+    return render_template('lista.html', lista=lista_seleccionada, libros=lista_seleccionada['libros'])
 
 
 # Ruta principal para la página de inicio
@@ -501,7 +557,7 @@ def inicio():
     for libro in libros:
         libro["color"] = generar_color_pastel()
     
-    return render_template('inicio.html', libros=libros, listas=listas.values())
+    return render_template('inicio.html', libros=libros, listas=_listas_usuario())
 
 # Ruta para procesar el PDF y traducirlo a Braille
 @app.route('/upload', methods=['POST'])
@@ -565,7 +621,7 @@ def _render_resultados(resultados: Optional[Dict], titulo: str, query: str):
                            libros=libros_resultado,
                            titulo=titulo,
                            query=query,
-                           listas=listas.values())
+                           listas=_listas_usuario())
 
 @app.route('/buscar', methods=['POST'])
 def buscar():
@@ -589,10 +645,6 @@ def buscar_categoria():
     nombre = genero['nombre'] if genero else query
     return _render_resultados(resultados, f'Catálogo: {nombre}', nombre)
 
-
-@app.route('/registro')
-def registro():
-    return render_template('registro.html')
 
 @app.route('/download_braille', methods=['POST'])
 def download_braille():

@@ -179,5 +179,9 @@ temp_files/*
 !temp_files/.gitkeep
 *.pkl
 
+# Firebase: clave privada de la cuenta de servicio
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+
 
 

@@ -72,7 +72,7 @@
         <div style="display: flex; align-items: center;">
             <img src="{{ url_for('static', filename='images/usuario.svg') }}" alt="Icono usuario" style="object-fit: scale-down; width: 60px; height: 80px;">
             <h1 style="color: white; margin: 0; margin-left: 20px; font-weight: 300;">
-                ¡Hola {{ current_user.email if current_user.is_authenticated else 'Invitado' }}!
+                ¡Hola {{ current_user.nombre if current_user.is_authenticated else 'Invitado' }}!
             </h1>
         </div>
         <div style="display: flex; width: 380px; justify-content: space-between;">
@@ -96,11 +96,14 @@
                         {% endfor %}
                     </div>
                 </div>
-                <div style="padding: 15px;">
-                    <a href="{{ url_for('lista_individual', lista_id=lista.id) }}" style="text-decoration: none; color: #1E1E1E;">
+                <div style="padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <a href="{{ url_for('lista_individual', lista_id=lista.id) }}" style="text-decoration: none; color: #1E1E1E; min-width: 0;">
                         <h4 style="margin: 0;">{{ lista.nombre }}</h4>
                         <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">{{ lista.libros|length }} libros</p>
                     </a>
+                    <button type="button" class="btn-eliminar-lista" data-lista-id="{{ lista.id }}" data-lista-nombre="{{ lista.nombre }}"
+                        aria-label="Eliminar la lista {{ lista.nombre }}" title="Eliminar lista"
+                        style="background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-family: inherit; font-size: 0.8rem;">Eliminar</button>
                 </div>
             </div>
             {% else %}
@@ -117,6 +120,31 @@
             if (color) {
                 el.style.backgroundColor = color;
             }
+        });
+
+        document.querySelectorAll('.btn-eliminar-lista').forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+                var nombre = btn.getAttribute('data-lista-nombre');
+                if (!confirm('¿Eliminar la lista "' + nombre + '" y todos sus libros?')) return;
+                btn.disabled = true;
+                try {
+                    var resp = await fetch('/eliminar_lista', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lista_id: btn.getAttribute('data-lista-id') })
+                    });
+                    var data = await resp.json();
+                    if (resp.ok && data.success) {
+                        window.location.reload();
+                    } else {
+                        alert(data.message || 'No se pudo eliminar la lista.');
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    alert('Error de conexión al eliminar la lista.');
+                    btn.disabled = false;
+                }
+            });
         });
     </script>
 </body>
